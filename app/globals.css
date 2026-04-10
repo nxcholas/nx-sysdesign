@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Suppress default page scroll — the canvas handles its own pan/zoom */
+html,
+body {
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+
+@layer utilities {
+  /* Dotted grid background for the canvas.
+     background-position is controlled via inline style for pan tracking. */
+  .canvas-grid {
+    background-image: radial-gradient(circle, #374151 1.5px, transparent 1.5px);
+    background-size: 16px 16px;
+  }
+
+  /* Thin scrollbar for the side panel */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #374151 transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #374151;
+    border-radius: 2px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}

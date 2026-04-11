@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useCallback } from 'react';
-import type { PlacedComponent, CanvasTransform, PortSide } from '@/lib/types';
+import type { PlacedComponent, CanvasTransform, PortSide, Frame } from '@/lib/types';
 import { HttpMethodBadge } from '@/components/features/blocks/http-method-badge';
 import { StatusCodeBadge } from '@/components/features/blocks/status-code-badge';
 import { UserBlock } from '@/components/features/blocks/user-block';
@@ -11,6 +11,7 @@ import { DeleteButton } from './delete-button';
 import { ResizeHandles } from './resize-handles';
 import { ConnectionPort } from './connection-port';
 import { snapToGrid } from '@/lib/canvas-utils';
+import { isPointInsideFrame } from '@/lib/frame-utils';
 
 interface PlacedComponentItemProps {
   component: PlacedComponent;
@@ -24,6 +25,9 @@ interface PlacedComponentItemProps {
   onConnectionDragEnd: (componentId: string, port: PortSide) => void;
   isConnectionDragging: boolean;
   highlightedPorts: Set<string>;
+  frames: Frame[];
+  onSetComponentFrame: (componentId: string, frameId: string | null) => void;
+  onHighlightFrame: (id: string | null) => void;
 }
 
 function ComponentVisual({ component }: { component: PlacedComponent }) {
@@ -57,6 +61,9 @@ export function PlacedComponentItem({
   onConnectionDragEnd,
   isConnectionDragging,
   highlightedPorts,
+  frames,
+  onSetComponentFrame,
+  onHighlightFrame,
 }: PlacedComponentItemProps) {
   const dragStartRef = useRef<{
     pointerX: number;
@@ -70,7 +77,7 @@ export function PlacedComponentItem({
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (e.button !== 0) return;
-      if (isConnectionDragging) return; // Don't start component drag during connection drag
+      if (isConnectionDragging) return;
       e.stopPropagation();
       onSelect(component.id);
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -92,14 +99,41 @@ export function PlacedComponentItem({
       const newX = snapToGrid(dragStartRef.current.compX + dx);
       const newY = snapToGrid(dragStartRef.current.compY + dy);
       onMove(component.id, newX, newY);
+
+      // Highlight frame under component center (visual feedback only)
+      const center = { x: newX + component.width / 2, y: newY + component.height / 2 };
+      const targetFrame = frames.find((f) => isPointInsideFrame(center, f));
+      onHighlightFrame(targetFrame?.id ?? null);
     },
-    [component.id, transform.scale, onMove]
+    [component.id, component.width, component.height, transform.scale, onMove, frames, onHighlightFrame]
   );
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    if (dragStartRef.current) {
+      // Compute final center position for frame assignment
+      const dx = (e.clientX - dragStartRef.current.pointerX) / transform.scale;
+      const dy = (e.clientY - dragStartRef.current.pointerY) / transform.scale;
+      const newX = snapToGrid(dragStartRef.current.compX + dx);
+      const newY = snapToGrid(dragStartRef.current.compY + dy);
+      const center = { x: newX + component.width / 2, y: newY + component.height / 2 };
+
+      if (!component.frameId) {
+        const targetFrame = frames.find((f) => isPointInsideFrame(center, f));
+        if (targetFrame) {
+          onSetComponentFrame(component.id, targetFrame.id);
+        }
+      } else {
+        const parentFrame = frames.find((f) => f.id === component.frameId);
+        if (parentFrame && !isPointInsideFrame(center, parentFrame)) {
+          onSetComponentFrame(component.id, null);
+        }
+      }
+
+      onHighlightFrame(null);
+    }
     dragStartRef.current = null;
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-  }, []);
+  }, [component.id, component.width, component.height, component.frameId, transform.scale, frames, onSetComponentFrame, onHighlightFrame]);
 
   return (
     <div

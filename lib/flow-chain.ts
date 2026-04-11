@@ -1,13 +1,23 @@
-import type { Connection, PlacedComponent } from './types';
+import type { Connection, PaletteItemKind } from './types';
 import { getComponentRole, getSmartRoutePoints } from './connection-utils';
 
 /** Consistent animation speed in screen-space pixels per second. */
 export const FLOW_SPEED = 150;
 
+/** Any entity that can be a connection endpoint (component or frame). */
+export type FlowEntity = {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  kind?: PaletteItemKind;
+};
+
 export interface FlowChainSegment {
   connection: Connection;
-  source: PlacedComponent;
-  target: PlacedComponent;
+  source: FlowEntity;
+  target: FlowEntity;
 }
 
 export interface FlowChain {
@@ -26,11 +36,11 @@ type ScreenMapper = (pt: { x: number; y: number }) => { x: number; y: number };
  */
 export function buildFlowChains(
   connections: Connection[],
-  components: PlacedComponent[],
+  entities: FlowEntity[],
 ): FlowChain[] {
   if (connections.length === 0) return [];
 
-  const componentMap = new Map(components.map(c => [c.id, c]));
+  const entityMap = new Map(entities.map(e => [e.id, e]));
 
   // Build directed adjacency: componentId -> outgoing connections
   const outgoing = new Map<string, Connection[]>();
@@ -79,11 +89,11 @@ export function buildFlowChains(
       c => groupSet.has(c.sourceId) && groupSet.has(c.targetId)
     );
 
-    const root = findRoot(group, groupConnections, componentMap);
+    const root = findRoot(group, groupConnections, entityMap);
     if (!root) continue;
 
     // DFS from root following directed edges
-    tracePaths(root, outgoing, componentMap, chains);
+    tracePaths(root, outgoing, entityMap, chains);
   }
 
   return chains;
@@ -96,7 +106,7 @@ export function buildFlowChains(
 function findRoot(
   group: string[],
   groupConnections: Connection[],
-  componentMap: Map<string, PlacedComponent>,
+  entityMap: Map<string, FlowEntity>,
 ): string | null {
   // Compute in-degree within this group
   const inDegree = new Map<string, number>();
@@ -107,8 +117,8 @@ function findRoot(
 
   // Prefer entity with in-degree 0
   for (const id of group) {
-    const comp = componentMap.get(id);
-    if (comp && getComponentRole(comp.kind) === 'entity' && inDegree.get(id) === 0) {
+    const comp = entityMap.get(id);
+    if (comp && (!comp.kind || getComponentRole(comp.kind) === 'entity') && inDegree.get(id) === 0) {
       return id;
     }
   }
@@ -120,8 +130,8 @@ function findRoot(
 
   // Fallback: first entity in any connection
   for (const conn of groupConnections) {
-    const source = componentMap.get(conn.sourceId);
-    if (source && getComponentRole(source.kind) === 'entity') return conn.sourceId;
+    const source = entityMap.get(conn.sourceId);
+    if (source && (!source.kind || getComponentRole(source.kind) === 'entity')) return conn.sourceId;
   }
 
   // Last resort
@@ -135,7 +145,7 @@ function findRoot(
 function tracePaths(
   startId: string,
   outgoing: Map<string, Connection[]>,
-  componentMap: Map<string, PlacedComponent>,
+  entityMap: Map<string, FlowEntity>,
   chains: FlowChain[],
 ) {
   function dfs(nodeId: string, path: FlowChainSegment[], visitedNodes: Set<string>) {
@@ -150,8 +160,8 @@ function tracePaths(
     }
 
     for (const conn of nodeOutgoing) {
-      const source = componentMap.get(conn.sourceId);
-      const target = componentMap.get(conn.targetId);
+      const source = entityMap.get(conn.sourceId);
+      const target = entityMap.get(conn.targetId);
       if (!source || !target) continue;
 
       const segment: FlowChainSegment = { connection: conn, source, target };

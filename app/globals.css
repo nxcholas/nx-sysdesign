@@ -11,11 +11,21 @@ body {
 }
 
 @layer utilities {
-  /* Dotted grid background for the canvas.
+  /* Two-tier grid: minor lines every 8px, major lines every 32px (4×4 grouping).
      background-position is controlled via inline style for pan tracking. */
   .canvas-grid {
-    background-image: radial-gradient(circle, #374151 1.5px, transparent 1.5px);
-    background-size: 16px 16px;
+    --grid-minor: #161a24;
+    --grid-major: #1f2530;
+    background-image:
+      linear-gradient(to right, var(--grid-major) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px),
+      linear-gradient(to right, var(--grid-minor) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-minor) 1px, transparent 1px);
+    background-size:
+      32px 32px,
+      32px 32px,
+      8px 8px,
+      8px 8px;
   }
 
   /* Thin scrollbar for the side panel */

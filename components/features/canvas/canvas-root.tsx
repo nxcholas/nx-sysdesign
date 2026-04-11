@@ -2,16 +2,20 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useCanvas } from '@/hooks/use-canvas';
+import { useCanvasTool } from '@/hooks/use-canvas-tool';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { usePlacedComponents } from '@/hooks/use-placed-components';
 import { useConnectionDrag } from '@/hooks/use-connection-drag';
-import { BLOCK_DIMENSIONS, BADGE_DIMENSIONS } from '@/lib/constants';
+import { useMarqueeSelect } from '@/hooks/use-marquee-select';
+import { useFrameDraw } from '@/hooks/use-frame-draw';
+import { BLOCK_DIMENSIONS, BADGE_DIMENSIONS, GRID_SIZE } from '@/lib/constants';
 import type { PaletteItemKind, PortSide } from '@/lib/types';
+import { isPointInsideFrame } from '@/lib/frame-utils';
 import { getPortPosition, getSmartRoutePoints, pointsToPath, polylineMidpoint, getTempConnectionPath } from '@/lib/connection-utils';
 import { buildFlowChains, composeFlowPath, FLOW_SPEED } from '@/lib/flow-chain';
 import { CanvasViewport } from './canvas-viewport';
 import { CanvasDropZone } from './canvas-drop-zone';
-import { GRID_SIZE } from '@/lib/constants';
+import { CanvasToolbar } from './canvas-toolbar';
 
 function getDimensions(kind: PaletteItemKind) {
   if (kind.type === 'block') return BLOCK_DIMENSIONS[kind.kind];
@@ -20,14 +24,17 @@ function getDimensions(kind: PaletteItemKind) {
 
 export function CanvasRoot() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { transform, didPanRef, handlePointerDown, handlePointerMove, handlePointerUp, resetTransform } =
+  const { activeTool, setActiveTool } = useCanvasTool();
+  const { transform, didPanRef, spaceHeldRef, ctrlHeldRef, handlePointerDown, handlePointerMove, handlePointerUp, resetTransform } =
     useCanvas(containerRef);
   const { handleDragOver, handleDrop } = useDragDrop();
   const {
     placedComponents,
     connections,
-    selectedId,
+    selectedIds,
     selectedConnectionId,
+    frames,
+    selectedFrameId,
     addComponent,
     moveComponent,
     removeComponent,
@@ -36,6 +43,15 @@ export function CanvasRoot() {
     addConnection,
     removeConnection,
     selectConnection,
+    selectMany,
+    removeMany,
+    addFrame,
+    moveFrame,
+    removeFrame,
+    selectFrame,
+    renameFrame,
+    resizeFrame,
+    setComponentFrame,
   } = usePlacedComponents();
 
   // Refs that mirror state so native window listeners (in useConnectionDrag) can
@@ -44,33 +60,53 @@ export function CanvasRoot() {
   transformRef.current = transform;
   const placedComponentsRef = useRef(placedComponents);
   placedComponentsRef.current = placedComponents;
+  const framesRef = useRef(frames);
+  framesRef.current = frames;
 
   const {
     connectionDragState,
     connectionActiveRef,
     startConnectionDrag,
     endConnectionDrag,
-  } = useConnectionDrag(addConnection, containerRef, transformRef, placedComponentsRef);
+  } = useConnectionDrag(addConnection, containerRef, transformRef, placedComponentsRef, framesRef);
+
+  const {
+    selectionRect,
+    didMarqueeRef,
+    handleSelectionPointerDown,
+    handleSelectionPointerMove,
+    handleSelectionPointerUp,
+  } = useMarqueeSelect(containerRef, transform, placedComponents, selectMany, selectComponent, selectConnection);
+
+  const {
+    frameDrawRect,
+    handleFramePointerDown,
+    handleFramePointerMove,
+    handleFramePointerUp,
+  } = useFrameDraw(containerRef, transform, placedComponents, addFrame, setActiveTool);
 
   const [isDragOver, setIsDragOver] = useState(false);
+  const [highlightedFrameId, setHighlightedFrameId] = useState<string | null>(null);
 
-  // Keyboard shortcut: Delete/Backspace to remove selected component or connection
+  // Keyboard shortcut: Delete/Backspace to remove selected component(s) or connection
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (!selectedId && !selectedConnectionId) return;
+      if (selectedIds.length === 0 && !selectedConnectionId && !selectedFrameId) return;
       if (e.key !== 'Delete' && e.key !== 'Backspace') return;
       const tag = (document.activeElement as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       e.preventDefault();
-      if (selectedConnectionId) {
+      if (selectedFrameId) {
+        removeFrame(selectedFrameId);
+      } else if (selectedConnectionId) {
         removeConnection(selectedConnectionId);
-      } else if (selectedId) {
-        removeComponent(selectedId);
+      } else if (selectedIds.length > 0) {
+        removeMany(selectedIds);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selectedId, selectedConnectionId, removeComponent, removeConnection]);
+  }, [selectedIds, selectedConnectionId, selectedFrameId, removeMany, removeConnection, removeFrame]);
 
   const onDragEnter = useCallback(() => setIsDragOver(true), []);
   const onDragLeave = useCallback((e: React.DragEvent) => {
@@ -88,38 +124,66 @@ export function CanvasRoot() {
       if (!result) return;
       const { payload, x, y } = result;
       const { width, height } = getDimensions(payload);
-      addComponent(payload, x - width / 2, y - height / 2, width, height);
+      const dropX = x - width / 2;
+      const dropY = y - height / 2;
+      const center = { x, y };
+      const targetFrame = frames.find((f) => isPointInsideFrame(center, f));
+      addComponent(payload, dropX, dropY, width, height, targetFrame?.id);
     },
-    [transform, handleDrop, addComponent]
+    [transform, handleDrop, addComponent, frames]
   );
 
   const handleCanvasClick = useCallback(
     (e: React.MouseEvent) => {
       if (didPanRef.current) return;
+      if (didMarqueeRef.current) return;
       if (e.target === containerRef.current) {
         selectComponent(null);
         selectConnection(null);
+        selectFrame(null);
+        setHighlightedFrameId(null);
       }
     },
-    [didPanRef, selectComponent, selectConnection]
+    [didPanRef, didMarqueeRef, selectComponent, selectConnection, selectFrame, setHighlightedFrameId]
   );
 
-  // Guard all three pointer handlers: connection drag is handled by window-level
-  // native listeners in useConnectionDrag. We suppress canvas pan while active.
+  // Route pointer events between pan, marquee selection, frame draw, and connection drag.
+  // Connection drag is handled by window-level native listeners and takes priority.
   const handleCanvasPointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (connectionActiveRef.current) return;
-      handlePointerDown(e);
+
+      const isMiddleClick = e.button === 1;
+      const isLeftClick = e.button === 0;
+
+      // Pan: middle-click always, left-click if pan tool, space, or ctrl held
+      if (isMiddleClick || (isLeftClick && (activeTool === 'pan' || spaceHeldRef.current || ctrlHeldRef.current))) {
+        handlePointerDown(e);
+        return;
+      }
+
+      // Frame draw: left-click in frame mode
+      if (isLeftClick && activeTool === 'frame') {
+        handleFramePointerDown(e);
+        return;
+      }
+
+      // Selection: left-click in select mode on empty canvas
+      if (isLeftClick && activeTool === 'select') {
+        handleSelectionPointerDown(e);
+      }
     },
-    [connectionActiveRef, handlePointerDown]
+    [connectionActiveRef, activeTool, spaceHeldRef, handlePointerDown, handleFramePointerDown, handleSelectionPointerDown]
   );
 
   const handleCanvasPointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (connectionActiveRef.current) return;
       handlePointerMove(e);
+      handleSelectionPointerMove(e);
+      handleFramePointerMove(e);
     },
-    [connectionActiveRef, handlePointerMove]
+    [connectionActiveRef, handlePointerMove, handleSelectionPointerMove, handleFramePointerMove]
   );
 
   const handleCanvasPointerUp = useCallback(
@@ -133,8 +197,10 @@ export function CanvasRoot() {
         return;
       }
       handlePointerUp(e);
+      handleSelectionPointerUp(e);
+      handleFramePointerUp(e);
     },
-    [connectionActiveRef, handlePointerUp]
+    [connectionActiveRef, handlePointerUp, handleSelectionPointerUp, handleFramePointerUp]
   );
 
   const handleConnectionDragStart = useCallback(
@@ -160,8 +226,21 @@ export function CanvasRoot() {
       aria-label="System design canvas"
       className="relative flex-1 overflow-hidden bg-canvas-bg canvas-grid"
       style={{
-        backgroundPosition: `${transform.translateX % GRID_SIZE}px ${transform.translateY % GRID_SIZE}px`,
-        cursor: connectionActiveRef.current ? 'crosshair' : 'default',
+        backgroundPosition: [
+          `${transform.translateX % 32}px ${transform.translateY % 32}px`,
+          `${transform.translateX % 32}px ${transform.translateY % 32}px`,
+          `${transform.translateX % GRID_SIZE}px ${transform.translateY % GRID_SIZE}px`,
+          `${transform.translateX % GRID_SIZE}px ${transform.translateY % GRID_SIZE}px`,
+        ].join(', '),
+        cursor: connectionActiveRef.current
+          ? 'crosshair'
+          : activeTool === 'frame'
+            ? 'crosshair'
+            : selectionRect
+              ? 'crosshair'
+              : (activeTool === 'pan' || ctrlHeldRef.current)
+                ? 'grab'
+                : 'default',
       }}
       onPointerDown={handleCanvasPointerDown}
       onPointerMove={handleCanvasPointerMove}
@@ -179,8 +258,12 @@ export function CanvasRoot() {
           x: pt.x * scale + translateX,
           y: pt.y * scale + translateY,
         });
-        const componentMap = new Map(placedComponents.map(c => [c.id, c]));
-        const flowChains = buildFlowChains(connections, placedComponents);
+        type EntityRect = { id: string; x: number; y: number; width: number; height: number };
+        const entityMap = new Map<string, EntityRect>([
+          ...placedComponents.map(c => [c.id, c] as [string, EntityRect]),
+          ...frames.map(f => [f.id, f] as [string, EntityRect]),
+        ]);
+        const flowChains = buildFlowChains(connections, [...placedComponents, ...frames]);
 
         return (
           <svg
@@ -212,13 +295,26 @@ export function CanvasRoot() {
                     />
                   );
                 })}
+                {frames.map((f) => {
+                  const screenPos = toScreen({ x: f.x, y: f.y });
+                  return (
+                    <rect
+                      key={f.id}
+                      x={screenPos.x}
+                      y={screenPos.y}
+                      width={f.width * scale}
+                      height={f.height * scale}
+                      fill="black"
+                    />
+                  );
+                })}
               </mask>
             </defs>
 
             {/* Static connection lines with clickable hit areas */}
             {connections.map((conn) => {
-              const source = componentMap.get(conn.sourceId);
-              const target = componentMap.get(conn.targetId);
+              const source = entityMap.get(conn.sourceId);
+              const target = entityMap.get(conn.targetId);
               if (!source || !target) return null;
               const points = getSmartRoutePoints(source, target, conn.sourcePort, conn.targetPort);
               const pathD = pointsToPath(points.map(toScreen));
@@ -274,7 +370,7 @@ export function CanvasRoot() {
 
             {/* Temporary connection line during drag */}
             {connectionDragState.active && (() => {
-              const src = componentMap.get(connectionDragState.sourceId);
+              const src = entityMap.get(connectionDragState.sourceId);
               if (!src) return null;
               const from = toScreen(getPortPosition(src, connectionDragState.sourcePort));
               const to = toScreen({
@@ -302,9 +398,13 @@ export function CanvasRoot() {
       {selectedConnectionId && (() => {
         const conn = connections.find(c => c.id === selectedConnectionId);
         if (!conn) return null;
-        const componentMap = new Map(placedComponents.map(c => [c.id, c]));
-        const source = componentMap.get(conn.sourceId);
-        const target = componentMap.get(conn.targetId);
+        type EntityRect = { id: string; x: number; y: number; width: number; height: number };
+        const connEntityMap = new Map<string, EntityRect>([
+          ...placedComponents.map(c => [c.id, c] as [string, EntityRect]),
+          ...frames.map(f => [f.id, f] as [string, EntityRect]),
+        ]);
+        const source = connEntityMap.get(conn.sourceId);
+        const target = connEntityMap.get(conn.targetId);
         if (!source || !target) return null;
         const { scale: s, translateX: tx, translateY: ty } = transform;
         const toScreen = (pt: { x: number; y: number }) => ({
@@ -330,11 +430,11 @@ export function CanvasRoot() {
         );
       })()}
 
-      {/* Placed components + connections layer */}
+      {/* Placed components + frames layer */}
       <CanvasViewport
         transform={transform}
         placedComponents={placedComponents}
-        selectedId={selectedId}
+        selectedIds={selectedIds}
         onSelect={selectComponent}
         onMove={moveComponent}
         onRemove={removeComponent}
@@ -353,6 +453,16 @@ export function CanvasRoot() {
           }
           return set;
         })()}
+        frames={frames}
+        selectedFrameId={selectedFrameId}
+        highlightedFrameId={highlightedFrameId}
+        onSelectFrame={selectFrame}
+        onMoveFrame={moveFrame}
+        onRemoveFrame={removeFrame}
+        onRenameFrame={renameFrame}
+        onResizeFrame={resizeFrame}
+        onSetComponentFrame={setComponentFrame}
+        onHighlightFrame={setHighlightedFrameId}
       />
 
       {/* Drop zone visual indicator */}
@@ -374,6 +484,47 @@ export function CanvasRoot() {
           {Math.round(transform.scale * 100)}%
         </button>
       </div>
+
+      {/* Selection rectangle overlay */}
+      {selectionRect && (() => {
+        const { scale, translateX, translateY } = transform;
+        const x = Math.min(selectionRect.startX, selectionRect.endX);
+        const y = Math.min(selectionRect.startY, selectionRect.endY);
+        const w = Math.abs(selectionRect.endX - selectionRect.startX);
+        const h = Math.abs(selectionRect.endY - selectionRect.startY);
+        return (
+          <div
+            className="absolute pointer-events-none border border-blue-500/70 bg-blue-500/10"
+            style={{
+              left: x * scale + translateX,
+              top: y * scale + translateY,
+              width: w * scale,
+              height: h * scale,
+              zIndex: 5,
+            }}
+          />
+        );
+      })()}
+
+      {/* Frame draw preview */}
+      {frameDrawRect && (() => {
+        const { scale, translateX, translateY } = transform;
+        return (
+          <div
+            className="absolute pointer-events-none border border-dashed border-blue-400/70 bg-blue-400/5"
+            style={{
+              left: frameDrawRect.x * scale + translateX,
+              top: frameDrawRect.y * scale + translateY,
+              width: frameDrawRect.width * scale,
+              height: frameDrawRect.height * scale,
+              zIndex: 5,
+            }}
+          />
+        );
+      })()}
+
+      {/* Canvas toolbar */}
+      <CanvasToolbar activeTool={activeTool} onToolChange={setActiveTool} />
 
       {/* Empty state hint */}
       {placedComponents.length === 0 && (

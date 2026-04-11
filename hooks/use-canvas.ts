@@ -29,6 +29,7 @@ export function useCanvas(canvasRef: RefObject<HTMLElement | null>) {
   });
   const didPanRef = useRef(false);
   const spaceHeldRef = useRef(false);
+  const ctrlHeldRef = useRef(false);
 
   // Attach wheel listener imperatively so we can pass { passive: false }.
   // React's onWheel is passive in newer browsers and can't call preventDefault.
@@ -48,13 +49,15 @@ export function useCanvas(canvasRef: RefObject<HTMLElement | null>) {
     return () => el.removeEventListener('wheel', onWheel);
   }, [canvasRef]);
 
-  // Track spacebar for space+drag pan
+  // Track spacebar and Ctrl for hold-to-pan shortcuts
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space' && !e.repeat) spaceHeldRef.current = true;
+      if (e.key === 'Control' && !e.repeat) ctrlHeldRef.current = true;
     };
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') spaceHeldRef.current = false;
+      if (e.key === 'Control') ctrlHeldRef.current = false;
     };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
@@ -66,10 +69,7 @@ export function useCanvas(canvasRef: RefObject<HTMLElement | null>) {
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
-      // Left-click on empty canvas (placed components stopPropagation),
-      // middle mouse button, or space+left button starts pan
-      const isPan = e.button === 1 || e.button === 0;
-      if (!isPan) return;
+      if (e.button !== 0 && e.button !== 1) return;
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       didPanRef.current = false;
       panStateRef.current = {
@@ -112,6 +112,8 @@ export function useCanvas(canvasRef: RefObject<HTMLElement | null>) {
   return {
     transform,
     didPanRef,
+    spaceHeldRef,
+    ctrlHeldRef,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,

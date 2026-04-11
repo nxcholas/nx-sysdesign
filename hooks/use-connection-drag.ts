@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import type { PortSide, CanvasTransform, PlacedComponent } from '@/lib/types';
+import type { PortSide, CanvasTransform, PlacedComponent, Frame } from '@/lib/types';
 import { screenToCanvas } from '@/lib/canvas-utils';
 import { findPortAtPosition } from '@/lib/connection-utils';
 
@@ -30,6 +30,7 @@ export function useConnectionDrag(
   containerRef: React.RefObject<HTMLDivElement | null>,
   transformRef: React.RefObject<CanvasTransform>,
   placedComponentsRef: React.RefObject<PlacedComponent[]>,
+  framesRef: React.RefObject<Frame[]>,
 ) {
   const [dragState, setDragState] = useState<ConnectionDragState>(INACTIVE);
   const activeRef = useRef(false);
@@ -94,7 +95,7 @@ export function useConnectionDrag(
           const hit = findPortAtPosition(
             pos.x,
             pos.y,
-            placedComponentsRef.current,
+            [...placedComponentsRef.current, ...framesRef.current],
             sourceRef.current.id,
           );
           if (hit) {
@@ -112,7 +113,7 @@ export function useConnectionDrag(
         window.removeEventListener('pointerup', onUp);
       };
     },
-    [containerRef, transformRef, placedComponentsRef],
+    [containerRef, transformRef, placedComponentsRef, framesRef],
   );
 
   // Cleanup on unmount

@@ -1,8 +1,10 @@
 import type { PlacedComponent, PortSide, PaletteItemKind, ComponentRole } from './types';
 
-/** Returns the canvas-space position of a port on a component edge midpoint. */
+type Rect = { x: number; y: number; width: number; height: number };
+
+/** Returns the canvas-space position of a port on a component/frame edge midpoint. */
 export function getPortPosition(
-  component: PlacedComponent,
+  component: Rect,
   side: PortSide
 ): { x: number; y: number } {
   switch (side) {
@@ -51,12 +53,13 @@ const PORT_HIT_RADIUS = 16;
 
 /**
  * Find the closest port within hit radius at the given canvas-space position.
+ * Searches both components and frames (frames have their own connection ports).
  * Returns { componentId, port } or null if nothing is close enough.
  */
 export function findPortAtPosition(
   canvasX: number,
   canvasY: number,
-  components: PlacedComponent[],
+  components: (PlacedComponent | Rect & { id: string })[],
   excludeId?: string
 ): { componentId: string; port: PortSide } | null {
   let best: { componentId: string; port: PortSide; dist: number } | null = null;
@@ -286,8 +289,8 @@ function removeCollinear(points: Point[]): Point[] {
  * Returns canvas-space points for the full route.
  */
 export function getSmartRoutePoints(
-  source: PlacedComponent,
-  target: PlacedComponent,
+  source: Rect,
+  target: Rect,
   sourcePort: PortSide,
   targetPort: PortSide,
 ): Point[] {

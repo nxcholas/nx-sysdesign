@@ -19,6 +19,19 @@ export function screenToCanvas(
   };
 }
 
+/** Check if two axis-aligned rectangles intersect. */
+export function rectsIntersect(
+  a: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number },
+): boolean {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  );
+}
+
 /** Snap a value to the nearest grid increment. */
 export function snapToGrid(value: number, gridSize: number = GRID_SIZE): number {
   return Math.round(value / gridSize) * gridSize;

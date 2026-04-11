@@ -7,10 +7,17 @@ import type {
 } from './types';
 
 // --- Grid ---
-export const GRID_SIZE = 16;
+export const GRID_SIZE = 8;
 export const CANVAS_MIN_SCALE = 0.25;
 export const CANVAS_MAX_SCALE = 4.0;
 export const CANVAS_ZOOM_STEP = 0.001;
+
+// --- Frame ---
+export const FRAME_PADDING = 24;
+export const FRAME_LABEL_HEIGHT = 28;
+export const FRAME_MIN_WIDTH = 96;
+export const FRAME_MIN_HEIGHT = 96;
+export const FRAME_DEFAULT_LABEL = 'Untitled Container';
 
 // --- HTTP Methods ---
 export const HTTP_METHODS: HttpMethod[] = [

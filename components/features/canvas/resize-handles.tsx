@@ -2,9 +2,8 @@
 
 import { useRef, useCallback } from 'react';
 import type { PlacedComponent, CanvasTransform } from '@/lib/types';
-import { BLOCK_MIN_DIMENSIONS } from '@/lib/constants';
 import { snapToGrid } from '@/lib/canvas-utils';
-import type { BlockKind } from '@/lib/types';
+import { getBlockDef } from '@/lib/block-registry';
 
 type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
@@ -46,9 +45,9 @@ export function ResizeHandles({ component, transform, onResize }: ResizeHandlesP
     startHeight: number;
   } | null>(null);
 
-  const blockKind = component.kind.type === 'block' ? component.kind.kind as BlockKind : null;
-  const minWidth = blockKind ? BLOCK_MIN_DIMENSIONS[blockKind].width : 48;
-  const minHeight = blockKind ? BLOCK_MIN_DIMENSIONS[blockKind].height : 48;
+  const def = component.kind.type === 'block' ? getBlockDef(component.kind.kind) : null;
+  const minWidth = def ? def.minWidth : 48;
+  const minHeight = def ? def.minHeight : 48;
 
   const handleSize = 8 / transform.scale;
 

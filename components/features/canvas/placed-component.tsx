@@ -4,9 +4,7 @@ import { useRef, useCallback } from 'react';
 import type { PlacedComponent, CanvasTransform, PortSide, Frame } from '@/lib/types';
 import { HttpMethodBadge } from '@/components/features/blocks/http-method-badge';
 import { StatusCodeBadge } from '@/components/features/blocks/status-code-badge';
-import { UserBlock } from '@/components/features/blocks/user-block';
-import { WebServerBlock } from '@/components/features/blocks/web-server-block';
-import { DatabaseBlock } from '@/components/features/blocks/database-block';
+import { BlockRenderer } from '@/components/features/blocks/block-renderer';
 import { DeleteButton } from './delete-button';
 import { ResizeHandles } from './resize-handles';
 import { ConnectionPort } from './connection-port';
@@ -23,6 +21,7 @@ interface PlacedComponentItemProps {
   onResize: (id: string, width: number, height: number) => void;
   onConnectionDragStart: (componentId: string, port: PortSide, e: React.PointerEvent) => void;
   onConnectionDragEnd: (componentId: string, port: PortSide) => void;
+  onRename: (id: string, label: string) => void;
   isConnectionDragging: boolean;
   highlightedPorts: Set<string>;
   frames: Frame[];
@@ -30,7 +29,7 @@ interface PlacedComponentItemProps {
   onHighlightFrame: (id: string | null) => void;
 }
 
-function ComponentVisual({ component }: { component: PlacedComponent }) {
+function ComponentVisual({ component, onRename }: { component: PlacedComponent; onRename: (id: string, label: string) => void }) {
   const { kind } = component;
 
   if (kind.type === 'http-method') {
@@ -40,9 +39,14 @@ function ComponentVisual({ component }: { component: PlacedComponent }) {
     return <StatusCodeBadge group={kind.group} code={kind.code} label={kind.label} size="md" />;
   }
   if (kind.type === 'block') {
-    if (kind.kind === 'user') return <UserBlock label={component.label} />;
-    if (kind.kind === 'web-server') return <WebServerBlock label={component.label} />;
-    if (kind.kind === 'database') return <DatabaseBlock label={component.label} />;
+    return (
+      <BlockRenderer
+        kind={kind.kind}
+        label={component.label}
+        size="md"
+        onRenameLabel={(newLabel) => onRename(component.id, newLabel)}
+      />
+    );
   }
   return null;
 }
@@ -59,6 +63,7 @@ export function PlacedComponentItem({
   onResize,
   onConnectionDragStart,
   onConnectionDragEnd,
+  onRename,
   isConnectionDragging,
   highlightedPorts,
   frames,
@@ -155,7 +160,7 @@ export function PlacedComponentItem({
           : 'hover:ring-1 hover:ring-gray-500'
         }`}
     >
-      <ComponentVisual component={component} />
+      <ComponentVisual component={component} onRename={onRename} />
 
       {/* Connection ports — visible on hover or when connection dragging */}
       {PORT_SIDES.map((side) => (

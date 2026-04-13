@@ -12,7 +12,7 @@ export type StatusCode = {
 
 // --- System Block Types ---
 
-export type BlockKind = 'user' | 'web-server' | 'database';
+export type BlockKind = string;
 
 /** Classification of a component in system design terms. */
 export type ComponentRole = 'entity' | 'process';
@@ -35,6 +35,7 @@ export interface PaletteItem {
 export interface PaletteSection {
   id: string;
   label: string;
+  defaultOpen?: boolean;
   items: PaletteItem[];
 }
 
@@ -113,6 +114,7 @@ export type CanvasAction =
   | { type: 'REMOVE_FRAME'; id: string }
   | { type: 'SELECT_FRAME'; id: string | null }
   | { type: 'RENAME_FRAME'; id: string; label: string }
+  | { type: 'RENAME_COMPONENT'; id: string; label: string }
   | { type: 'RESIZE_FRAME'; id: string; width: number; height: number; x: number; y: number }
   | { type: 'SET_COMPONENT_FRAME'; componentId: string; frameId: string | null }
   | { type: 'LOAD_DIAGRAM'; payload: Pick<DiagramSchema, 'components' | 'connections' | 'frames'> };

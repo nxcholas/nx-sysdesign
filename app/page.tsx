@@ -76,6 +76,7 @@ export default function Page() {
           removeFrame={canvasHook.removeFrame}
           selectFrame={canvasHook.selectFrame}
           renameFrame={canvasHook.renameFrame}
+          renameComponent={canvasHook.renameComponent}
           resizeFrame={canvasHook.resizeFrame}
           setComponentFrame={canvasHook.setComponentFrame}
           transform={canvasTransformHook.transform}

@@ -152,6 +152,14 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
         ),
       };
     }
+    case 'RENAME_COMPONENT': {
+      return {
+        ...state,
+        placedComponents: state.placedComponents.map((c) =>
+          c.id === action.id ? { ...c, label: action.label } : c
+        ),
+      };
+    }
     case 'RESIZE_FRAME': {
       return {
         ...state,
@@ -277,6 +285,10 @@ export function usePlacedComponents() {
     dispatch({ type: 'RENAME_FRAME', id, label });
   }, []);
 
+  const renameComponent = useCallback((id: string, label: string) => {
+    dispatch({ type: 'RENAME_COMPONENT', id, label });
+  }, []);
+
   const resizeFrame = useCallback((id: string, width: number, height: number, x: number, y: number) => {
     dispatch({ type: 'RESIZE_FRAME', id, width, height, x, y });
   }, []);
@@ -315,6 +327,7 @@ export function usePlacedComponents() {
     removeFrame,
     selectFrame,
     renameFrame,
+    renameComponent,
     resizeFrame,
     setComponentFrame,
     loadDiagram,

@@ -3,9 +3,7 @@
 import type { PaletteItem } from '@/lib/types';
 import { HttpMethodBadge } from '@/components/features/blocks/http-method-badge';
 import { StatusCodeBadge } from '@/components/features/blocks/status-code-badge';
-import { UserBlock } from '@/components/features/blocks/user-block';
-import { WebServerBlock } from '@/components/features/blocks/web-server-block';
-import { DatabaseBlock } from '@/components/features/blocks/database-block';
+import { BlockRenderer } from '@/components/features/blocks/block-renderer';
 
 interface PaletteItemProps {
   item: PaletteItem;
@@ -24,9 +22,7 @@ function PaletteItemVisual({ item }: { item: PaletteItem }) {
   }
 
   if (dragPayload.type === 'block') {
-    if (dragPayload.kind === 'user') return <UserBlock size="sm" />;
-    if (dragPayload.kind === 'web-server') return <WebServerBlock size="sm" />;
-    if (dragPayload.kind === 'database') return <DatabaseBlock size="sm" />;
+    return <BlockRenderer kind={dragPayload.kind} size="sm" />;
   }
 
   return null;

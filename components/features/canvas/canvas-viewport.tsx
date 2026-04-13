@@ -22,6 +22,7 @@ interface CanvasViewportProps {
   onMoveFrame: (id: string, x: number, y: number) => void;
   onRemoveFrame: (id: string) => void;
   onRenameFrame: (id: string, label: string) => void;
+  onRenameComponent: (id: string, label: string) => void;
   onResizeFrame: (id: string, width: number, height: number, x: number, y: number) => void;
   onSetComponentFrame: (componentId: string, frameId: string | null) => void;
   onHighlightFrame: (id: string | null) => void;
@@ -46,6 +47,7 @@ export function CanvasViewport({
   onMoveFrame,
   onRemoveFrame,
   onRenameFrame,
+  onRenameComponent,
   onResizeFrame,
   onSetComponentFrame,
   onHighlightFrame,
@@ -99,6 +101,7 @@ export function CanvasViewport({
           onResize={onResize}
           onConnectionDragStart={onConnectionDragStart}
           onConnectionDragEnd={onConnectionDragEnd}
+          onRename={onRenameComponent}
           isConnectionDragging={connectionDragState.active}
           highlightedPorts={highlightedPorts}
           frames={frames}

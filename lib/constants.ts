@@ -2,9 +2,9 @@ import type {
   HttpMethod,
   StatusCodeGroup,
   StatusCode,
-  BlockKind,
   PaletteSection,
 } from './types';
+import { getAllCategories } from './block-registry';
 
 // --- Grid ---
 export const GRID_SIZE = 8;
@@ -87,56 +87,46 @@ export const STATUS_CODES: StatusCode[] = [
   { code: 504, label: 'Gateway Timeout',      group: '5xx' },
 ];
 
-// --- Block Kinds ---
-export const BLOCK_KINDS: BlockKind[] = ['user', 'web-server', 'database'];
-
-export const BLOCK_LABELS: Record<BlockKind, string> = {
-  'user':       'User',
-  'web-server': 'Web Server',
-  'database':   'Database',
-};
-
-export const BLOCK_DIMENSIONS: Record<BlockKind, { width: number; height: number }> = {
-  'user':       { width: 80,  height: 96  },
-  'web-server': { width: 128, height: 96  },
-  'database':   { width: 96,  height: 112 },
-};
-
-export const BLOCK_MIN_DIMENSIONS: Record<BlockKind, { width: number; height: number }> = {
-  'user':       { width: 80,  height: 96  },
-  'web-server': { width: 128, height: 96  },
-  'database':   { width: 96,  height: 112 },
-};
-
+// --- Badge Dimensions (HTTP methods + status codes) ---
 export const BADGE_DIMENSIONS = { width: 96, height: 40 };
 
 // --- Palette Sections (drives the side panel — pure data) ---
+
+const httpMethodsSection: PaletteSection = {
+  id: 'http-methods',
+  label: 'HTTP Methods',
+  defaultOpen: true,
+  items: HTTP_METHODS.map((method) => ({
+    id: `method-${method}`,
+    label: method,
+    dragPayload: { type: 'http-method' as const, method },
+  })),
+};
+
+const statusCodesSection: PaletteSection = {
+  id: 'status-codes',
+  label: 'Status Codes',
+  defaultOpen: true,
+  items: STATUS_CODE_GROUPS.map((group) => ({
+    id: `status-group-${group}`,
+    label: `${group} — ${STATUS_CODE_GROUP_LABELS[group]}`,
+    dragPayload: { type: 'status-code' as const, group },
+  })),
+};
+
+const blockSections: PaletteSection[] = getAllCategories().map((cat) => ({
+  id: `blocks-${cat.id}`,
+  label: cat.label,
+  defaultOpen: cat.defaultOpen,
+  items: cat.blocks.map((def) => ({
+    id: `block-${def.kind}`,
+    label: def.label,
+    dragPayload: { type: 'block' as const, kind: def.kind },
+  })),
+}));
+
 export const PALETTE_SECTIONS: PaletteSection[] = [
-  {
-    id: 'http-methods',
-    label: 'HTTP Methods',
-    items: HTTP_METHODS.map((method) => ({
-      id: `method-${method}`,
-      label: method,
-      dragPayload: { type: 'http-method' as const, method },
-    })),
-  },
-  {
-    id: 'status-codes',
-    label: 'Status Codes',
-    items: STATUS_CODE_GROUPS.map((group) => ({
-      id: `status-group-${group}`,
-      label: `${group} — ${STATUS_CODE_GROUP_LABELS[group]}`,
-      dragPayload: { type: 'status-code' as const, group },
-    })),
-  },
-  {
-    id: 'blocks',
-    label: 'Components',
-    items: BLOCK_KINDS.map((kind) => ({
-      id: `block-${kind}`,
-      label: BLOCK_LABELS[kind],
-      dragPayload: { type: 'block' as const, kind },
-    })),
-  },
+  httpMethodsSection,
+  statusCodesSection,
+  ...blockSections,
 ];

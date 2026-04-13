@@ -48,6 +48,7 @@ function safeSetItem(key: string, value: string): void {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function safeRemoveItem(key: string): void {
   if (!isLocalStorageAvailable()) return;
   try {

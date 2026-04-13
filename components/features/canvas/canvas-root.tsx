@@ -7,7 +7,8 @@ import { useDragDrop } from '@/hooks/use-drag-drop';
 import { useConnectionDrag } from '@/hooks/use-connection-drag';
 import { useMarqueeSelect } from '@/hooks/use-marquee-select';
 import { useFrameDraw } from '@/hooks/use-frame-draw';
-import { BLOCK_DIMENSIONS, BADGE_DIMENSIONS, GRID_SIZE } from '@/lib/constants';
+import { BADGE_DIMENSIONS, GRID_SIZE } from '@/lib/constants';
+import { getBlockDef } from '@/lib/block-registry';
 import type {
   PaletteItemKind,
   PortSide,
@@ -24,7 +25,10 @@ import { CanvasDropZone } from './canvas-drop-zone';
 import { CanvasToolbar } from './canvas-toolbar';
 
 function getDimensions(kind: PaletteItemKind) {
-  if (kind.type === 'block') return BLOCK_DIMENSIONS[kind.kind];
+  if (kind.type === 'block') {
+    const def = getBlockDef(kind.kind);
+    return def ? { width: def.defaultWidth, height: def.defaultHeight } : BADGE_DIMENSIONS;
+  }
   return BADGE_DIMENSIONS;
 }
 
@@ -57,6 +61,7 @@ export interface CanvasRootProps {
   removeFrame: (id: string) => void;
   selectFrame: (id: string | null) => void;
   renameFrame: (id: string, label: string) => void;
+  renameComponent: (id: string, label: string) => void;
   resizeFrame: (id: string, width: number, height: number, x: number, y: number) => void;
   setComponentFrame: (componentId: string, frameId: string | null) => void;
   // Pan/zoom handlers (owned by page.tsx via useCanvas)
@@ -96,6 +101,7 @@ export function CanvasRoot(props: CanvasRootProps) {
     removeFrame,
     selectFrame,
     renameFrame,
+    renameComponent,
     resizeFrame,
     setComponentFrame,
     didPanRef,
@@ -387,6 +393,7 @@ export function CanvasRoot(props: CanvasRootProps) {
         onMoveFrame={moveFrame}
         onRemoveFrame={removeFrame}
         onRenameFrame={renameFrame}
+        onRenameComponent={renameComponent}
         onResizeFrame={resizeFrame}
         onSetComponentFrame={setComponentFrame}
         onHighlightFrame={setHighlightedFrameId}

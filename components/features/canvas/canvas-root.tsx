@@ -1,15 +1,21 @@
 'use client';
 
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { useCanvas } from '@/hooks/use-canvas';
+import type React from 'react';
 import { useCanvasTool } from '@/hooks/use-canvas-tool';
 import { useDragDrop } from '@/hooks/use-drag-drop';
-import { usePlacedComponents } from '@/hooks/use-placed-components';
 import { useConnectionDrag } from '@/hooks/use-connection-drag';
 import { useMarqueeSelect } from '@/hooks/use-marquee-select';
 import { useFrameDraw } from '@/hooks/use-frame-draw';
 import { BLOCK_DIMENSIONS, BADGE_DIMENSIONS, GRID_SIZE } from '@/lib/constants';
-import type { PaletteItemKind, PortSide } from '@/lib/types';
+import type {
+  PaletteItemKind,
+  PortSide,
+  PlacedComponent,
+  Connection,
+  Frame,
+  CanvasTransform,
+} from '@/lib/types';
 import { isPointInsideFrame } from '@/lib/frame-utils';
 import { getPortPosition, getSmartRoutePoints, pointsToPath, polylineMidpoint, getTempConnectionPath } from '@/lib/connection-utils';
 import { buildFlowChains, composeFlowPath, FLOW_SPEED } from '@/lib/flow-chain';
@@ -22,12 +28,50 @@ function getDimensions(kind: PaletteItemKind) {
   return BADGE_DIMENSIONS;
 }
 
-export function CanvasRoot() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { activeTool, setActiveTool } = useCanvasTool();
-  const { transform, didPanRef, spaceHeldRef, ctrlHeldRef, handlePointerDown, handlePointerMove, handlePointerUp, resetTransform } =
-    useCanvas(containerRef);
-  const { handleDragOver, handleDrop } = useDragDrop();
+export interface CanvasRootProps {
+  // State
+  placedComponents: PlacedComponent[];
+  connections: Connection[];
+  selectedIds: string[];
+  selectedConnectionId: string | null;
+  frames: Frame[];
+  selectedFrameId: string | null;
+  transform: CanvasTransform;
+  canvasRef: React.RefObject<HTMLDivElement | null>;
+  // Callbacks — component
+  addComponent: (kind: PaletteItemKind, x: number, y: number, width: number, height: number, frameId?: string) => void;
+  moveComponent: (id: string, x: number, y: number) => void;
+  removeComponent: (id: string) => void;
+  selectComponent: (id: string | null) => void;
+  resizeComponent: (id: string, width: number, height: number) => void;
+  // Callbacks — connection
+  addConnection: (sourceId: string, sourcePort: PortSide, targetId: string, targetPort: PortSide) => void;
+  removeConnection: (id: string) => void;
+  selectConnection: (id: string | null) => void;
+  // Callbacks — multi-select
+  selectMany: (ids: string[]) => void;
+  removeMany: (ids: string[]) => void;
+  // Callbacks — frame
+  addFrame: (payload: Omit<Frame, 'id' | 'zIndex'>, childIds?: string[]) => void;
+  moveFrame: (id: string, x: number, y: number) => void;
+  removeFrame: (id: string) => void;
+  selectFrame: (id: string | null) => void;
+  renameFrame: (id: string, label: string) => void;
+  resizeFrame: (id: string, width: number, height: number, x: number, y: number) => void;
+  setComponentFrame: (componentId: string, frameId: string | null) => void;
+  // Pan/zoom handlers (owned by page.tsx via useCanvas)
+  didPanRef: React.RefObject<boolean>;
+  spaceHeldRef: React.RefObject<boolean>;
+  ctrlHeldRef: React.RefObject<boolean>;
+  handlePointerDown: (e: React.PointerEvent) => void;
+  handlePointerMove: (e: React.PointerEvent) => void;
+  handlePointerUp: (e: React.PointerEvent) => void;
+  resetTransform: () => void;
+  // Diagram persistence callback
+  onStateChange: () => void;
+}
+
+export function CanvasRoot(props: CanvasRootProps) {
   const {
     placedComponents,
     connections,
@@ -35,6 +79,8 @@ export function CanvasRoot() {
     selectedConnectionId,
     frames,
     selectedFrameId,
+    transform,
+    canvasRef,
     addComponent,
     moveComponent,
     removeComponent,
@@ -52,7 +98,20 @@ export function CanvasRoot() {
     renameFrame,
     resizeFrame,
     setComponentFrame,
-  } = usePlacedComponents();
+    didPanRef,
+    spaceHeldRef,
+    ctrlHeldRef,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    resetTransform,
+    onStateChange,
+  } = props;
+
+  // useCanvasTool is purely local UI state — kept internal
+  const { activeTool, setActiveTool } = useCanvasTool();
+
+  const { handleDragOver, handleDrop } = useDragDrop();
 
   // Refs that mirror state so native window listeners (in useConnectionDrag) can
   // always read the latest values without stale closures.
@@ -68,7 +127,7 @@ export function CanvasRoot() {
     connectionActiveRef,
     startConnectionDrag,
     endConnectionDrag,
-  } = useConnectionDrag(addConnection, containerRef, transformRef, placedComponentsRef, framesRef);
+  } = useConnectionDrag(addConnection, canvasRef, transformRef, placedComponentsRef, framesRef);
 
   const {
     selectionRect,
@@ -76,17 +135,28 @@ export function CanvasRoot() {
     handleSelectionPointerDown,
     handleSelectionPointerMove,
     handleSelectionPointerUp,
-  } = useMarqueeSelect(containerRef, transform, placedComponents, selectMany, selectComponent, selectConnection);
+  } = useMarqueeSelect(canvasRef, transform, placedComponents, selectMany, selectComponent, selectConnection);
 
   const {
     frameDrawRect,
     handleFramePointerDown,
     handleFramePointerMove,
     handleFramePointerUp,
-  } = useFrameDraw(containerRef, transform, placedComponents, addFrame, setActiveTool);
+  } = useFrameDraw(canvasRef, transform, placedComponents, addFrame, setActiveTool);
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [highlightedFrameId, setHighlightedFrameId] = useState<string | null>(null);
+
+  // Notify diagram hook when canvas state changes (with mount guard to avoid
+  // firing on initial render / diagram load).
+  const isMountedRef = useRef(false);
+  useEffect(() => {
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      return;
+    }
+    onStateChange();
+  }, [placedComponents, connections, frames, onStateChange]);
 
   // Keyboard shortcut: Delete/Backspace to remove selected component(s) or connection
   useEffect(() => {
@@ -118,7 +188,7 @@ export function CanvasRoot() {
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       setIsDragOver(false);
-      const rect = containerRef.current?.getBoundingClientRect();
+      const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
       const result = handleDrop(e, rect, transform);
       if (!result) return;
@@ -130,21 +200,21 @@ export function CanvasRoot() {
       const targetFrame = frames.find((f) => isPointInsideFrame(center, f));
       addComponent(payload, dropX, dropY, width, height, targetFrame?.id);
     },
-    [transform, handleDrop, addComponent, frames]
+    [transform, handleDrop, addComponent, frames, canvasRef]
   );
 
   const handleCanvasClick = useCallback(
     (e: React.MouseEvent) => {
       if (didPanRef.current) return;
       if (didMarqueeRef.current) return;
-      if (e.target === containerRef.current) {
+      if (e.target === canvasRef.current) {
         selectComponent(null);
         selectConnection(null);
         selectFrame(null);
         setHighlightedFrameId(null);
       }
     },
-    [didPanRef, didMarqueeRef, selectComponent, selectConnection, selectFrame, setHighlightedFrameId]
+    [didPanRef, didMarqueeRef, canvasRef, selectComponent, selectConnection, selectFrame]
   );
 
   // Route pointer events between pan, marquee selection, frame draw, and connection drag.
@@ -205,12 +275,12 @@ export function CanvasRoot() {
 
   const handleConnectionDragStart = useCallback(
     (componentId: string, port: PortSide, e: React.PointerEvent) => {
-      const el = containerRef.current;
+      const el = canvasRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
       startConnectionDrag(componentId, port, e, rect, transform);
     },
-    [startConnectionDrag, transform]
+    [startConnectionDrag, transform, canvasRef]
   );
 
   const handleConnectionDragEnd = useCallback(
@@ -222,7 +292,7 @@ export function CanvasRoot() {
 
   return (
     <main
-      ref={containerRef}
+      ref={canvasRef}
       aria-label="System design canvas"
       className="relative flex-1 overflow-hidden bg-canvas-bg canvas-grid"
       style={{
@@ -251,149 +321,6 @@ export function CanvasRoot() {
       onDrop={onDrop}
       onClick={handleCanvasClick}
     >
-      {/* Connections overlay — rendered in screen space, BEFORE viewport so bubbles flow behind components */}
-      {(connections.length > 0 || connectionDragState.active) && (() => {
-        const { scale, translateX, translateY } = transform;
-        const toScreen = (pt: { x: number; y: number }) => ({
-          x: pt.x * scale + translateX,
-          y: pt.y * scale + translateY,
-        });
-        type EntityRect = { id: string; x: number; y: number; width: number; height: number };
-        const entityMap = new Map<string, EntityRect>([
-          ...placedComponents.map(c => [c.id, c] as [string, EntityRect]),
-          ...frames.map(f => [f.id, f] as [string, EntityRect]),
-        ]);
-        const flowChains = buildFlowChains(connections, [...placedComponents, ...frames]);
-
-        return (
-          <svg
-            style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}
-            width="100%"
-            height="100%"
-          >
-            {/* Shared glow filter + component mask for bubbles */}
-            <defs>
-              <filter id="flow-glow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="2" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-              <mask id="bubble-mask">
-                <rect width="100%" height="100%" fill="white" />
-                {placedComponents.map((comp) => {
-                  const screenPos = toScreen({ x: comp.x, y: comp.y });
-                  return (
-                    <rect
-                      key={comp.id}
-                      x={screenPos.x}
-                      y={screenPos.y}
-                      width={comp.width * scale}
-                      height={comp.height * scale}
-                      fill="black"
-                    />
-                  );
-                })}
-                {frames.map((f) => {
-                  const screenPos = toScreen({ x: f.x, y: f.y });
-                  return (
-                    <rect
-                      key={f.id}
-                      x={screenPos.x}
-                      y={screenPos.y}
-                      width={f.width * scale}
-                      height={f.height * scale}
-                      fill="black"
-                    />
-                  );
-                })}
-              </mask>
-            </defs>
-
-            {/* Static connection lines with clickable hit areas */}
-            {connections.map((conn) => {
-              const source = entityMap.get(conn.sourceId);
-              const target = entityMap.get(conn.targetId);
-              if (!source || !target) return null;
-              const points = getSmartRoutePoints(source, target, conn.sourcePort, conn.targetPort);
-              const pathD = pointsToPath(points.map(toScreen));
-              const isConnSelected = conn.id === selectedConnectionId;
-              return (
-                <g key={conn.id}>
-                  {/* Invisible wide hit area for click detection */}
-                  <path
-                    d={pathD}
-                    fill="none"
-                    stroke="transparent"
-                    strokeWidth={12}
-                    strokeLinecap="round"
-                    style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
-                    onPointerDown={(e) => { e.stopPropagation(); }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      selectConnection(conn.id);
-                    }}
-                  />
-                  {/* Visible connection line */}
-                  <path
-                    d={pathD}
-                    fill="none"
-                    stroke={isConnSelected ? '#3b82f6' : '#6b7280'}
-                    strokeWidth={isConnSelected ? 3 : 2}
-                    strokeLinecap="round"
-                    style={{ pointerEvents: 'none' }}
-                  />
-                </g>
-              );
-            })}
-
-            {/* Flow chain animations — one bubble per chain, masked behind components */}
-            <g mask="url(#bubble-mask)">
-              {flowChains.map((chain) => {
-                const { pathD, totalLength } = composeFlowPath(chain.segments, toScreen);
-                if (!pathD || totalLength === 0) return null;
-                const dur = totalLength / FLOW_SPEED;
-                const pathId = `flow-${chain.id}`;
-                return (
-                  <g key={chain.id}>
-                    <path id={pathId} d={pathD} fill="none" stroke="none" />
-                    <circle r={4} fill="#3b82f6" filter="url(#flow-glow)">
-                      <animateMotion dur={`${dur}s`} repeatCount="indefinite">
-                        <mpath href={`#${pathId}`} />
-                      </animateMotion>
-                    </circle>
-                  </g>
-                );
-              })}
-            </g>
-
-            {/* Temporary connection line during drag */}
-            {connectionDragState.active && (() => {
-              const src = entityMap.get(connectionDragState.sourceId);
-              if (!src) return null;
-              const from = toScreen(getPortPosition(src, connectionDragState.sourcePort));
-              const to = toScreen({
-                x: connectionDragState.cursorX,
-                y: connectionDragState.cursorY,
-              });
-              const pathD = getTempConnectionPath(from, to, connectionDragState.sourcePort);
-              return (
-                <path
-                  d={pathD}
-                  fill="none"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  strokeDasharray="6 4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              );
-            })()}
-          </svg>
-        );
-      })()}
-
       {/* Connection delete button — positioned at midpoint of selected connection */}
       {selectedConnectionId && (() => {
         const conn = connections.find(c => c.id === selectedConnectionId);
@@ -464,6 +391,119 @@ export function CanvasRoot() {
         onSetComponentFrame={setComponentFrame}
         onHighlightFrame={setHighlightedFrameId}
       />
+
+      {/* Connections overlay — rendered AFTER viewport so hit areas are above frames/components */}
+      {(connections.length > 0 || connectionDragState.active) && (() => {
+        const { scale, translateX, translateY } = transform;
+        const toScreen = (pt: { x: number; y: number }) => ({
+          x: pt.x * scale + translateX,
+          y: pt.y * scale + translateY,
+        });
+        type EntityRect = { id: string; x: number; y: number; width: number; height: number };
+        const entityMap = new Map<string, EntityRect>([
+          ...placedComponents.map(c => [c.id, c] as [string, EntityRect]),
+          ...frames.map(f => [f.id, f] as [string, EntityRect]),
+        ]);
+        const flowChains = buildFlowChains(connections, [...placedComponents, ...frames]);
+
+        return (
+          <svg
+            style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1 }}
+            width="100%"
+            height="100%"
+          >
+            <defs>
+              <filter id="flow-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="2" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            {/* Static connection lines with clickable hit areas */}
+            {connections.map((conn) => {
+              const source = entityMap.get(conn.sourceId);
+              const target = entityMap.get(conn.targetId);
+              if (!source || !target) return null;
+              const points = getSmartRoutePoints(source, target, conn.sourcePort, conn.targetPort);
+              const pathD = pointsToPath(points.map(toScreen));
+              const isConnSelected = conn.id === selectedConnectionId;
+              return (
+                <g key={conn.id}>
+                  {/* Invisible wide hit area for click detection */}
+                  <path
+                    d={pathD}
+                    fill="none"
+                    stroke="transparent"
+                    strokeWidth={12}
+                    strokeLinecap="round"
+                    style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+                    onPointerDown={(e) => { e.stopPropagation(); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      selectConnection(conn.id);
+                    }}
+                  />
+                  {/* Visible connection line */}
+                  <path
+                    d={pathD}
+                    fill="none"
+                    stroke={isConnSelected ? '#3b82f6' : '#6b7280'}
+                    strokeWidth={isConnSelected ? 3 : 2}
+                    strokeLinecap="round"
+                    style={{ pointerEvents: 'none' }}
+                  />
+                </g>
+              );
+            })}
+
+            {/* Flow chain animations */}
+            <g>
+              {flowChains.map((chain) => {
+                const { pathD, totalLength } = composeFlowPath(chain.segments, toScreen);
+                if (!pathD || totalLength === 0) return null;
+                const dur = totalLength / FLOW_SPEED;
+                const pathId = `flow-${chain.id}`;
+                return (
+                  <g key={chain.id}>
+                    <path id={pathId} d={pathD} fill="none" stroke="none" />
+                    <circle r={4} fill="#3b82f6" filter="url(#flow-glow)">
+                      <animateMotion dur={`${dur}s`} repeatCount="indefinite">
+                        <mpath href={`#${pathId}`} />
+                      </animateMotion>
+                    </circle>
+                  </g>
+                );
+              })}
+            </g>
+
+            {/* Temporary connection line during drag */}
+            {connectionDragState.active && (() => {
+              const src = entityMap.get(connectionDragState.sourceId);
+              if (!src) return null;
+              const from = toScreen(getPortPosition(src, connectionDragState.sourcePort));
+              const to = toScreen({
+                x: connectionDragState.cursorX,
+                y: connectionDragState.cursorY,
+              });
+              const pathD = getTempConnectionPath(from, to, connectionDragState.sourcePort);
+              return (
+                <path
+                  d={pathD}
+                  fill="none"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  strokeDasharray="6 4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              );
+            })()}
+          </svg>
+        );
+      })()}
 
       {/* Drop zone visual indicator */}
       <CanvasDropZone isDragOver={isDragOver} />

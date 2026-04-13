@@ -8,6 +8,7 @@ import type {
   PortSide,
   Connection,
   Frame,
+  DiagramSchema,
 } from '@/lib/types';
 import { getFrameBounds } from '@/lib/frame-utils';
 import { FRAME_DEFAULT_LABEL } from '@/lib/constants';
@@ -167,6 +168,19 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
       );
       return { ...state, placedComponents: updated };
     }
+    case 'LOAD_DIAGRAM': {
+      const allZIndexes = [
+        ...action.payload.components.map((c) => c.zIndex),
+        ...action.payload.frames.map((f) => f.zIndex),
+      ];
+      return {
+        ...initialState,
+        placedComponents: action.payload.components,
+        connections: action.payload.connections,
+        frames: action.payload.frames,
+        nextZIndex: allZIndexes.length === 0 ? 1 : Math.max(...allZIndexes) + 1,
+      };
+    }
     default:
       return state;
   }
@@ -271,7 +285,15 @@ export function usePlacedComponents() {
     dispatch({ type: 'SET_COMPONENT_FRAME', componentId, frameId });
   }, []);
 
+  const loadDiagram = useCallback(
+    (schema: Pick<DiagramSchema, 'components' | 'connections' | 'frames'>) => {
+      dispatch({ type: 'LOAD_DIAGRAM', payload: schema });
+    },
+    []
+  );
+
   return {
+    state,
     placedComponents: state.placedComponents,
     connections: state.connections,
     selectedIds: state.selectedIds,
@@ -295,5 +317,6 @@ export function usePlacedComponents() {
     renameFrame,
     resizeFrame,
     setComponentFrame,
+    loadDiagram,
   };
 }

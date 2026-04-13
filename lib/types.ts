@@ -114,7 +114,8 @@ export type CanvasAction =
   | { type: 'SELECT_FRAME'; id: string | null }
   | { type: 'RENAME_FRAME'; id: string; label: string }
   | { type: 'RESIZE_FRAME'; id: string; width: number; height: number; x: number; y: number }
-  | { type: 'SET_COMPONENT_FRAME'; componentId: string; frameId: string | null };
+  | { type: 'SET_COMPONENT_FRAME'; componentId: string; frameId: string | null }
+  | { type: 'LOAD_DIAGRAM'; payload: Pick<DiagramSchema, 'components' | 'connections' | 'frames'> };
 
 export interface CanvasState {
   placedComponents: PlacedComponent[];
@@ -124,4 +125,25 @@ export interface CanvasState {
   nextZIndex: number;
   frames: Frame[];
   selectedFrameId: string | null;
+}
+
+// --- Diagram Persistence Types ---
+
+export type SaveMode = 'auto' | 'manual';
+
+export interface DiagramSchema {
+  id: string;
+  name: string;
+  createdAt: string;       // ISO 8601
+  updatedAt: string;
+  components: PlacedComponent[];
+  connections: Connection[];
+  frames: Frame[];
+  viewport: CanvasTransform;
+}
+
+export interface DiagramsStore {
+  diagrams: DiagramSchema[];
+  activeDiagramId: string;
+  openTabIds: string[];
 }

@@ -1,11 +1,45 @@
+'use client';
+
+import React from 'react';
+import type { SaveMode } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { HeaderActions } from './header-actions';
+import { DiagramTabs } from './diagram-tabs';
+import { SaveModeToggle } from './save-mode-toggle';
 
-export function Header() {
+interface HeaderProps {
+  tabs: Array<{ id: string; name: string }>;
+  activeTabId: string;
+  saveMode: SaveMode;
+  isDirty: boolean;
+  onSelectTab: (id: string) => void;
+  onCloseTab: (id: string) => void;
+  onRenameTab: (id: string, name: string) => void;
+  onReorderTabs: (newOrder: string[]) => void;
+  onNewTab: () => void;
+  onToggleSaveMode: (mode: SaveMode) => void;
+  onManualSave: () => void;
+}
+
+export function Header(props: HeaderProps): React.ReactElement {
+  const {
+    tabs,
+    activeTabId,
+    saveMode,
+    isDirty,
+    onSelectTab,
+    onCloseTab,
+    onRenameTab,
+    onReorderTabs,
+    onNewTab,
+    onToggleSaveMode,
+    onManualSave,
+  } = props;
+
   return (
     <header className="h-12 flex-shrink-0 bg-header-bg border-b border-header-border flex items-center px-4 gap-3">
       {/* Logo / brand */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-shrink-0">
         <div
           aria-hidden="true"
           className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center text-white"
@@ -30,17 +64,31 @@ export function Header() {
         </span>
       </div>
 
-      <Separator orientation="vertical" className="h-5" />
+      <Separator orientation="vertical" className="h-5 flex-shrink-0" />
 
-      {/* Diagram title placeholder */}
-      <span className="text-sm text-gray-500 font-mono">
-        Untitled diagram
-      </span>
+      {/* Diagram tabs — takes remaining space and scrolls horizontally */}
+      <DiagramTabs
+        tabs={tabs}
+        activeTabId={activeTabId}
+        onSelect={onSelectTab}
+        onClose={onCloseTab}
+        onRename={onRenameTab}
+        onReorder={onReorderTabs}
+        onNewTab={onNewTab}
+      />
 
-      {/* Push auth actions to the right */}
-      <div className="ml-auto">
-        <HeaderActions />
-      </div>
+      {/* Save mode toggle */}
+      <SaveModeToggle
+        saveMode={saveMode}
+        isDirty={isDirty}
+        onToggle={onToggleSaveMode}
+        onManualSave={onManualSave}
+      />
+
+      <Separator orientation="vertical" className="h-5 flex-shrink-0" />
+
+      {/* Auth / header actions */}
+      <HeaderActions />
     </header>
   );
 }

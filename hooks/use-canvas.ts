@@ -47,7 +47,8 @@ export function useCanvas(canvasRef: RefObject<HTMLElement | null>) {
 
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, [canvasRef]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasRef.current]);
 
   // Track spacebar and Ctrl for hold-to-pan shortcuts
   useEffect(() => {
@@ -111,6 +112,7 @@ export function useCanvas(canvasRef: RefObject<HTMLElement | null>) {
 
   return {
     transform,
+    setTransform,
     didPanRef,
     spaceHeldRef,
     ctrlHeldRef,

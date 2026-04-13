@@ -18,7 +18,7 @@ import type {
   CanvasTransform,
 } from '@/lib/types';
 import { isPointInsideFrame } from '@/lib/frame-utils';
-import { getPortPosition, getSmartRoutePoints, pointsToPath, polylineMidpoint, getTempConnectionPath } from '@/lib/connection-utils';
+import { getPortPosition, getSmartRoutePoints, pointsToPath, polylineMidpoint, getTempConnectionPath, truncatePolyline, PORT_HIT_RADIUS } from '@/lib/connection-utils';
 import { buildFlowChains, composeFlowPath, FLOW_SPEED } from '@/lib/flow-chain';
 import { CanvasViewport } from './canvas-viewport';
 import { CanvasDropZone } from './canvas-drop-zone';
@@ -363,6 +363,53 @@ export function CanvasRoot(props: CanvasRootProps) {
         );
       })()}
 
+      {/* Flow bubble layer — rendered BEFORE viewport so bubbles appear behind components */}
+      {connections.length > 0 && (() => {
+        const { scale, translateX, translateY } = transform;
+        const toScreen = (pt: { x: number; y: number }) => ({
+          x: pt.x * scale + translateX,
+          y: pt.y * scale + translateY,
+        });
+        const flowChains = buildFlowChains(connections, [...placedComponents, ...frames]);
+        if (flowChains.length === 0) return null;
+
+        return (
+          <svg
+            style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}
+            width="100%"
+            height="100%"
+          >
+            <defs>
+              <filter id="flow-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="2" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <g>
+              {flowChains.map((chain) => {
+                const { pathD, totalLength } = composeFlowPath(chain.segments, toScreen);
+                if (!pathD || totalLength === 0) return null;
+                const dur = totalLength / FLOW_SPEED;
+                const pathId = `flow-${chain.id}`;
+                return (
+                  <g key={chain.id}>
+                    <path id={pathId} d={pathD} fill="none" stroke="none" />
+                    <circle r={4} fill="#3b82f6" filter="url(#flow-glow)">
+                      <animateMotion dur={`${dur}s`} repeatCount="indefinite">
+                        <mpath href={`#${pathId}`} />
+                      </animateMotion>
+                    </circle>
+                  </g>
+                );
+              })}
+            </g>
+          </svg>
+        );
+      })()}
+
       {/* Placed components + frames layer */}
       <CanvasViewport
         transform={transform}
@@ -411,7 +458,6 @@ export function CanvasRoot(props: CanvasRootProps) {
           ...placedComponents.map(c => [c.id, c] as [string, EntityRect]),
           ...frames.map(f => [f.id, f] as [string, EntityRect]),
         ]);
-        const flowChains = buildFlowChains(connections, [...placedComponents, ...frames]);
 
         return (
           <svg
@@ -419,29 +465,23 @@ export function CanvasRoot(props: CanvasRootProps) {
             width="100%"
             height="100%"
           >
-            <defs>
-              <filter id="flow-glow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="2" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
             {/* Static connection lines with clickable hit areas */}
             {connections.map((conn) => {
               const source = entityMap.get(conn.sourceId);
               const target = entityMap.get(conn.targetId);
               if (!source || !target) return null;
               const points = getSmartRoutePoints(source, target, conn.sourcePort, conn.targetPort);
-              const pathD = pointsToPath(points.map(toScreen));
+              const screenPoints = points.map(toScreen);
+              const pathD = pointsToPath(screenPoints);
+              // Truncate hit area near ports so port dots can receive pointer events
+              const hitPoints = truncatePolyline(screenPoints, PORT_HIT_RADIUS * scale);
+              const hitPathD = pointsToPath(hitPoints);
               const isConnSelected = conn.id === selectedConnectionId;
               return (
                 <g key={conn.id}>
-                  {/* Invisible wide hit area for click detection */}
+                  {/* Invisible wide hit area for click detection — trimmed near ports */}
                   <path
-                    d={pathD}
+                    d={hitPathD}
                     fill="none"
                     stroke="transparent"
                     strokeWidth={12}
@@ -465,26 +505,6 @@ export function CanvasRoot(props: CanvasRootProps) {
                 </g>
               );
             })}
-
-            {/* Flow chain animations */}
-            <g>
-              {flowChains.map((chain) => {
-                const { pathD, totalLength } = composeFlowPath(chain.segments, toScreen);
-                if (!pathD || totalLength === 0) return null;
-                const dur = totalLength / FLOW_SPEED;
-                const pathId = `flow-${chain.id}`;
-                return (
-                  <g key={chain.id}>
-                    <path id={pathId} d={pathD} fill="none" stroke="none" />
-                    <circle r={4} fill="#3b82f6" filter="url(#flow-glow)">
-                      <animateMotion dur={`${dur}s`} repeatCount="indefinite">
-                        <mpath href={`#${pathId}`} />
-                      </animateMotion>
-                    </circle>
-                  </g>
-                );
-              })}
-            </g>
 
             {/* Temporary connection line during drag */}
             {connectionDragState.active && (() => {

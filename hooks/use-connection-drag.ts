@@ -67,6 +67,12 @@ export function useConnectionDrag(
       canvasRect: DOMRect,
       transform: CanvasTransform,
     ) => {
+      // If a drag was left active (e.g. pointer-up missed), clean up before starting a new one
+      if (activeRef.current) {
+        cleanupRef.current?.();
+        cleanupRef.current = null;
+        activeRef.current = false;
+      }
       activeRef.current = true;
       sourceRef.current = { id: componentId, port };
 

@@ -48,7 +48,7 @@ export function isValidDataFlow(source: PlacedComponent, target: PlacedComponent
 const PORT_SIDES: PortSide[] = ['top', 'right', 'bottom', 'left'];
 
 /** Hit-test radius in canvas-space pixels. */
-const PORT_HIT_RADIUS = 16;
+export const PORT_HIT_RADIUS = 16;
 
 /**
  * Find the closest port within hit radius at the given canvas-space position.
@@ -139,19 +139,21 @@ function vSegOverlapsBBox(x: number, y1: number, y2: number, box: BBox): boolean
 }
 
 /**
- * Validate that every segment in a route avoids all provided expanded bboxes.
+ * Validate that every segment in a route avoids both expanded bboxes.
  * Checks each consecutive pair as an H or V segment.
  */
-function isRouteValid(points: Point[], ...boxes: BBox[]): boolean {
+function isRouteValid(points: Point[], srcBox: BBox, tgtBox: BBox): boolean {
   for (let i = 0; i < points.length - 1; i++) {
     const a = points[i]!;
     const b = points[i + 1]!;
-    for (const box of boxes) {
-      if (a.x === b.x) {
-        if (vSegOverlapsBBox(a.x, a.y, b.y, box)) return false;
-      } else {
-        if (hSegOverlapsBBox(a.y, a.x, b.x, box)) return false;
-      }
+    if (a.x === b.x) {
+      // Vertical segment
+      if (vSegOverlapsBBox(a.x, a.y, b.y, srcBox)) return false;
+      if (vSegOverlapsBBox(a.x, a.y, b.y, tgtBox)) return false;
+    } else {
+      // Horizontal segment
+      if (hSegOverlapsBBox(a.y, a.x, b.x, srcBox)) return false;
+      if (hSegOverlapsBBox(a.y, a.x, b.x, tgtBox)) return false;
     }
   }
   return true;
@@ -165,18 +167,16 @@ function generateCandidates(
   sa: Point, ta: Point,
   exitDir: Direction, tgtExitDir: Direction,
   srcBox: BBox, tgtBox: BBox,
-  obstacleBoxes: BBox[],
 ): Point[][] {
   const exitIsH = isHorizontalDir(exitDir);
   const entryIsH = isHorizontalDir(tgtExitDir);
   const candidates: Point[][] = [];
 
-  // Safe corridor edges spanning ALL components (src, tgt, obstacles)
-  const allBoxes = [srcBox, tgtBox, ...obstacleBoxes];
-  const topY    = Math.min(...allBoxes.map(b => b.y));
-  const bottomY = Math.max(...allBoxes.map(b => b.y + b.height));
-  const leftX   = Math.min(...allBoxes.map(b => b.x));
-  const rightX  = Math.max(...allBoxes.map(b => b.x + b.width));
+  // Combined bounding box edges (safe corridors)
+  const topY = Math.min(srcBox.y, tgtBox.y);
+  const bottomY = Math.max(srcBox.y + srcBox.height, tgtBox.y + tgtBox.height);
+  const leftX = Math.min(srcBox.x, tgtBox.x);
+  const rightX = Math.max(srcBox.x + srcBox.width, tgtBox.x + tgtBox.width);
 
   // ----- Strategy 1: L-shape (only if exit and entry axes differ) -----
   if (exitIsH !== entryIsH) {
@@ -187,17 +187,16 @@ function generateCandidates(
   }
 
   // ----- Strategy 2: Z-shape (3 intermediate segments) -----
-  // Prefer outer edge corridors first (routes around obstacles), midpoint last
   if (exitIsH) {
-    // V-H-V: try edge corridors first, then midpoint as fallback
+    // V-H-V: try midpoint, then edge corridors
     const midY = (sa.y + ta.y) / 2;
-    for (const y of [topY, bottomY, midY]) {
+    for (const y of [midY, topY, bottomY]) {
       candidates.push([{ x: sa.x, y }, { x: ta.x, y }]);
     }
   } else {
-    // H-V-H: try edge corridors first, then midpoint as fallback
+    // H-V-H: try midpoint, then edge corridors
     const midX = (sa.x + ta.x) / 2;
-    for (const x of [leftX, rightX, midX]) {
+    for (const x of [midX, leftX, rightX]) {
       candidates.push([{ x, y: sa.y }, { x, y: ta.y }]);
     }
   }
@@ -283,8 +282,8 @@ function removeCollinear(points: Point[]): Point[] {
  * Smart orthogonal router: draw.io-style perpendicular exit/entry routing.
  *
  * Generates candidate routes with increasing complexity (L-shape → Z-shape
- * → 5-segment wrap-around), validates every segment against source, target,
- * and all obstacle bounding boxes, and returns the simplest valid route.
+ * → 5-segment wrap-around), validates every segment against both component
+ * bounding boxes, and returns the simplest valid route.
  *
  * Returns canvas-space points for the full route.
  */
@@ -293,7 +292,6 @@ export function getSmartRoutePoints(
   target: Rect,
   sourcePort: PortSide,
   targetPort: PortSide,
-  obstacles?: Rect[],
 ): Point[] {
   const srcPortPos = getPortPosition(source, sourcePort);
   const tgtPortPos = getPortPosition(target, targetPort);
@@ -303,18 +301,17 @@ export function getSmartRoutePoints(
 
   const srcBox = expandBBox(source, ROUTE_CLEARANCE);
   const tgtBox = expandBBox(target, ROUTE_CLEARANCE);
-  const obstacleBoxes = (obstacles ?? []).map(o => expandBBox(o, ROUTE_CLEARANCE));
 
   // Exit and entry anchors — clearance away from the port, perpendicular to face
   const sa = offsetInDirection(srcPortPos, exitDir, ROUTE_CLEARANCE);
   const ta = offsetInDirection(tgtPortPos, tgtExitDir, ROUTE_CLEARANCE);
 
   // Try candidates from simplest to most complex, return first valid route
-  const candidates = generateCandidates(sa, ta, exitDir, tgtExitDir, srcBox, tgtBox, obstacleBoxes);
+  const candidates = generateCandidates(sa, ta, exitDir, tgtExitDir, srcBox, tgtBox);
 
   for (const mid of candidates) {
     const route = [sa, ...mid, ta];
-    if (isRouteValid(route, srcBox, tgtBox, ...obstacleBoxes)) {
+    if (isRouteValid(route, srcBox, tgtBox)) {
       return removeCollinear([srcPortPos, sa, ...mid, ta, tgtPortPos]);
     }
   }
@@ -361,29 +358,106 @@ export function pointsToPath(points: Point[]): string {
 }
 
 // ---------------------------------------------------------------------------
-// Anchor-aware routing (used for temporary drag line)
+// Simple midpoint routing (used for temporary drag line only)
 // ---------------------------------------------------------------------------
 
+function getOrthogonalRoute(
+  from: Point,
+  to: Point,
+  sourcePort?: PortSide,
+): string {
+  const sourceHorizontal = sourcePort === 'left' || sourcePort === 'right';
+  if (sourceHorizontal || !sourcePort) {
+    const midX = (from.x + to.x) / 2;
+    return `M ${from.x} ${from.y} L ${midX} ${from.y} L ${midX} ${to.y} L ${to.x} ${to.y}`;
+  }
+  const midY = (from.y + to.y) / 2;
+  return `M ${from.x} ${from.y} L ${from.x} ${midY} L ${to.x} ${midY} L ${to.x} ${to.y}`;
+}
+
 /**
- * Returns an orthogonal SVG path for the temporary connection line that matches
- * the exit-clearance behavior of the smart router. Uses the same ROUTE_CLEARANCE
- * offset from the source port before bending, so the preview closely matches
- * the final connection shape.
- *
- * Coordinates are in whatever space the caller uses (screen or canvas-space).
+ * Returns an orthogonal SVG path for the temporary connection line
+ * (from a port to the current cursor position — no target component available).
  */
 export function getTempConnectionPath(
   from: Point,
   to: Point,
   sourcePort: PortSide,
 ): string {
-  const exitDir = portExitDirection(sourcePort);
-  const sa = offsetInDirection(from, exitDir, ROUTE_CLEARANCE);
-  if (isHorizontalDir(exitDir)) {
-    // Horizontal exit: move right/left to sa, then drop to to.y, then across to to.x
-    return `M ${from.x} ${from.y} L ${sa.x} ${sa.y} L ${sa.x} ${to.y} L ${to.x} ${to.y}`;
-  } else {
-    // Vertical exit: move up/down to sa, then across to to.x, then down to to.y
-    return `M ${from.x} ${from.y} L ${sa.x} ${sa.y} L ${to.x} ${sa.y} L ${to.x} ${to.y}`;
+  if (from.x === to.x || from.y === to.y) {
+    return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
   }
+  return getOrthogonalRoute(from, to, sourcePort);
+}
+
+/**
+ * Trims `amount` pixels from both ends of a screen-space polyline.
+ * Used to create dead zones around port hit areas so connection hit-area
+ * paths don't intercept clicks intended for the port itself.
+ *
+ * Returns the trimmed point array. If the total path length is less than
+ * 2 * amount, returns a two-point path at the midpoint (degenerate — no
+ * clickable hit area for extremely short connections).
+ */
+export function truncatePolyline(points: Point[], amount: number): Point[] {
+  if (points.length < 2) return points;
+
+  // Compute cumulative lengths
+  const lengths: number[] = [0];
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i]!.x - points[i - 1]!.x;
+    const dy = points[i]!.y - points[i - 1]!.y;
+    lengths.push(lengths[i - 1]! + Math.sqrt(dx * dx + dy * dy));
+  }
+  const total = lengths[lengths.length - 1]!;
+
+  if (total <= amount * 2) {
+    // Path too short — return midpoint so hit area effectively vanishes
+    const mid = total / 2;
+    for (let i = 1; i < points.length; i++) {
+      if (lengths[i]! >= mid) {
+        const seg = lengths[i]! - lengths[i - 1]!;
+        const t = seg === 0 ? 0 : (mid - lengths[i - 1]!) / seg;
+        const mx = points[i - 1]!.x + t * (points[i]!.x - points[i - 1]!.x);
+        const my = points[i - 1]!.y + t * (points[i]!.y - points[i - 1]!.y);
+        return [{ x: mx, y: my }, { x: mx, y: my }];
+      }
+    }
+    return points;
+  }
+
+  const trimStart = amount;
+  const trimEnd = total - amount;
+
+  const result: Point[] = [];
+
+  for (let i = 1; i < points.length; i++) {
+    const segStart = lengths[i - 1]!;
+    const segEnd = lengths[i]!;
+
+    if (segEnd <= trimStart || segStart >= trimEnd) continue;
+
+    const clampedStart = Math.max(segStart, trimStart);
+    const clampedEnd = Math.min(segEnd, trimEnd);
+    const segLen = segEnd - segStart;
+
+    const tStart = segLen === 0 ? 0 : (clampedStart - segStart) / segLen;
+    const tEnd = segLen === 0 ? 1 : (clampedEnd - segStart) / segLen;
+
+    const pStart: Point = {
+      x: points[i - 1]!.x + tStart * (points[i]!.x - points[i - 1]!.x),
+      y: points[i - 1]!.y + tStart * (points[i]!.y - points[i - 1]!.y),
+    };
+    const pEnd: Point = {
+      x: points[i - 1]!.x + tEnd * (points[i]!.x - points[i - 1]!.x),
+      y: points[i - 1]!.y + tEnd * (points[i]!.y - points[i - 1]!.y),
+    };
+
+    if (result.length === 0) {
+      result.push(pStart);
+    }
+    result.push(pEnd);
+  }
+
+  return result.length >= 2 ? result : points;
 }

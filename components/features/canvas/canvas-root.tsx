@@ -18,7 +18,7 @@ import type {
   CanvasTransform,
 } from '@/lib/types';
 import { isPointInsideFrame } from '@/lib/frame-utils';
-import { getPortPosition, getSmartRoutePoints, pointsToPath, polylineMidpoint, getTempConnectionPath, truncatePolyline, PORT_HIT_RADIUS } from '@/lib/connection-utils';
+import { getSmartRoutePoints, pointsToPath, polylineMidpoint, oppositePort, truncatePolyline, PORT_HIT_RADIUS } from '@/lib/connection-utils';
 import { buildFlowChains, composeFlowPath, FLOW_SPEED } from '@/lib/flow-chain';
 import { CanvasViewport } from './canvas-viewport';
 import { CanvasDropZone } from './canvas-drop-zone';
@@ -344,7 +344,8 @@ export function CanvasRoot(props: CanvasRootProps) {
           x: pt.x * s + tx,
           y: pt.y * s + ty,
         });
-        const points = getSmartRoutePoints(source, target, conn.sourcePort, conn.targetPort);
+        const obstacles = placedComponents.filter(e => e.id !== conn.sourceId && e.id !== conn.targetId);
+        const points = getSmartRoutePoints(source, target, conn.sourcePort, conn.targetPort, obstacles);
         const mid = polylineMidpoint(points.map(toScreen));
         return (
           <button
@@ -390,7 +391,7 @@ export function CanvasRoot(props: CanvasRootProps) {
             </defs>
             <g>
               {flowChains.map((chain) => {
-                const { pathD, totalLength } = composeFlowPath(chain.segments, toScreen);
+                const { pathD, totalLength } = composeFlowPath(chain.segments, toScreen, placedComponents);
                 if (!pathD || totalLength === 0) return null;
                 const dur = totalLength / FLOW_SPEED;
                 const pathId = `flow-${chain.id}`;
@@ -470,7 +471,10 @@ export function CanvasRoot(props: CanvasRootProps) {
               const source = entityMap.get(conn.sourceId);
               const target = entityMap.get(conn.targetId);
               if (!source || !target) return null;
-              const points = getSmartRoutePoints(source, target, conn.sourcePort, conn.targetPort);
+              // Frames are transparent containers — routes can pass through them freely.
+              // Only placed components (visual blocks) count as routing obstacles.
+              const obstacles = placedComponents.filter(e => e.id !== conn.sourceId && e.id !== conn.targetId);
+              const points = getSmartRoutePoints(source, target, conn.sourcePort, conn.targetPort, obstacles);
               const screenPoints = points.map(toScreen);
               const pathD = pointsToPath(screenPoints);
               // Truncate hit area near ports so port dots can receive pointer events
@@ -510,12 +514,12 @@ export function CanvasRoot(props: CanvasRootProps) {
             {connectionDragState.active && (() => {
               const src = entityMap.get(connectionDragState.sourceId);
               if (!src) return null;
-              const from = toScreen(getPortPosition(src, connectionDragState.sourcePort));
-              const to = toScreen({
-                x: connectionDragState.cursorX,
-                y: connectionDragState.cursorY,
-              });
-              const pathD = getTempConnectionPath(from, to, connectionDragState.sourcePort);
+              const cursorCanvas = { x: connectionDragState.cursorX, y: connectionDragState.cursorY };
+              const targetRect = { x: cursorCanvas.x - 0.5, y: cursorCanvas.y - 0.5, width: 1, height: 1 };
+              const tgtPort = oppositePort(connectionDragState.sourcePort);
+              const obstacles = placedComponents.filter(e => e.id !== connectionDragState.sourceId);
+              const pts = getSmartRoutePoints(src, targetRect, connectionDragState.sourcePort, tgtPort, obstacles);
+              const pathD = pointsToPath(pts.map(toScreen));
               return (
                 <path
                   d={pathD}

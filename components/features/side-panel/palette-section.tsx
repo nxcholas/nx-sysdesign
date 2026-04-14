@@ -8,10 +8,12 @@ import { Separator } from '@/components/ui/separator';
 interface PaletteSectionProps {
   section: PaletteSection;
   onDragStart: (item: PaletteItem) => (e: React.DragEvent) => void;
+  forceOpen?: boolean;
 }
 
-export function PaletteSectionComponent({ section, onDragStart }: PaletteSectionProps) {
+export function PaletteSectionComponent({ section, onDragStart, forceOpen }: PaletteSectionProps) {
   const [isOpen, setIsOpen] = useState(section.defaultOpen ?? true);
+  const open = forceOpen ? true : isOpen;
 
   return (
     <div>
@@ -21,7 +23,7 @@ export function PaletteSectionComponent({ section, onDragStart }: PaletteSection
         className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-left
           text-gray-400 uppercase tracking-widest hover:text-gray-200 transition-colors
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-        aria-expanded={isOpen}
+        aria-expanded={open}
         aria-controls={`section-${section.id}`}
       >
         <span>{section.label}</span>
@@ -29,7 +31,7 @@ export function PaletteSectionComponent({ section, onDragStart }: PaletteSection
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
-          className={`w-3.5 h-3.5 transition-transform duration-150 ${isOpen ? '' : '-rotate-90'}`}
+          className={`w-3.5 h-3.5 transition-transform duration-150 ${open ? '' : '-rotate-90'}`}
           aria-hidden="true"
         >
           <path
@@ -40,7 +42,7 @@ export function PaletteSectionComponent({ section, onDragStart }: PaletteSection
         </svg>
       </button>
 
-      {isOpen && (
+      {open && (
         <div
           id={`section-${section.id}`}
           className="px-2 pb-2 grid grid-cols-3 gap-1"

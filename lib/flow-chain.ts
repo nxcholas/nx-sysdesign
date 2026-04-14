@@ -193,6 +193,7 @@ function tracePaths(
 export function composeFlowPath(
   segments: FlowChainSegment[],
   toScreen: ScreenMapper,
+  obstacles?: { x: number; y: number; width: number; height: number }[],
 ): { pathD: string; totalLength: number } {
   if (segments.length === 0) return { pathD: '', totalLength: 0 };
 
@@ -202,9 +203,13 @@ export function composeFlowPath(
     const seg = segments[i]!;
 
     // Smart route for this connection (canvas-space), then convert to screen
+    const segObstacles = (obstacles ?? []).filter(
+      o => o !== seg.source && o !== seg.target
+    );
     const routePoints = getSmartRoutePoints(
       seg.source, seg.target,
       seg.connection.sourcePort, seg.connection.targetPort,
+      segObstacles,
     ).map(toScreen);
 
     if (i === 0) {

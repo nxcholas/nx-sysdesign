@@ -139,21 +139,19 @@ function vSegOverlapsBBox(x: number, y1: number, y2: number, box: BBox): boolean
 }
 
 /**
- * Validate that every segment in a route avoids both expanded bboxes.
+ * Validate that every segment in a route avoids all provided expanded bboxes.
  * Checks each consecutive pair as an H or V segment.
  */
-function isRouteValid(points: Point[], srcBox: BBox, tgtBox: BBox): boolean {
+function isRouteValid(points: Point[], boxes: BBox[]): boolean {
   for (let i = 0; i < points.length - 1; i++) {
     const a = points[i]!;
     const b = points[i + 1]!;
-    if (a.x === b.x) {
-      // Vertical segment
-      if (vSegOverlapsBBox(a.x, a.y, b.y, srcBox)) return false;
-      if (vSegOverlapsBBox(a.x, a.y, b.y, tgtBox)) return false;
-    } else {
-      // Horizontal segment
-      if (hSegOverlapsBBox(a.y, a.x, b.x, srcBox)) return false;
-      if (hSegOverlapsBBox(a.y, a.x, b.x, tgtBox)) return false;
+    for (const box of boxes) {
+      if (a.x === b.x) {
+        if (vSegOverlapsBBox(a.x, a.y, b.y, box)) return false;
+      } else {
+        if (hSegOverlapsBBox(a.y, a.x, b.x, box)) return false;
+      }
     }
   }
   return true;
@@ -188,10 +186,19 @@ function generateCandidates(
 
   // ----- Strategy 2: Z-shape (3 intermediate segments) -----
   if (exitIsH) {
-    // V-H-V: try midpoint, then edge corridors
-    const midY = (sa.y + ta.y) / 2;
-    for (const y of [midY, topY, bottomY]) {
-      candidates.push([{ x: sa.x, y }, { x: ta.x, y }]);
+    const targetIsDiagonal = sa.x !== ta.x && sa.y !== ta.y;
+    if (targetIsDiagonal) {
+      // V-H-V: vertical first (preferred for diagonal targets)
+      const midX = (sa.x + ta.x) / 2;
+      for (const x of [midX, leftX, rightX]) {
+        candidates.push([{ x, y: sa.y }, { x, y: ta.y }]);
+      }
+    } else {
+      // H-V-H: horizontal first (target on same horizontal axis)
+      const midY = (sa.y + ta.y) / 2;
+      for (const y of [midY, topY, bottomY]) {
+        candidates.push([{ x: sa.x, y }, { x: ta.x, y }]);
+      }
     }
   } else {
     // H-V-H: try midpoint, then edge corridors
@@ -292,6 +299,7 @@ export function getSmartRoutePoints(
   target: Rect,
   sourcePort: PortSide,
   targetPort: PortSide,
+  obstacles?: Rect[],
 ): Point[] {
   const srcPortPos = getPortPosition(source, sourcePort);
   const tgtPortPos = getPortPosition(target, targetPort);
@@ -302,6 +310,19 @@ export function getSmartRoutePoints(
   const srcBox = expandBBox(source, ROUTE_CLEARANCE);
   const tgtBox = expandBBox(target, ROUTE_CLEARANCE);
 
+  // Build full obstacle list: src + target + any additional obstacles
+  const allBoxes: BBox[] = [
+    srcBox,
+    tgtBox,
+    ...(obstacles ?? []).map(o => expandBBox(o, ROUTE_CLEARANCE)),
+  ];
+
+  // Straight line: ports already orthogonally aligned and no obstacles in the way
+  if (srcPortPos.x === tgtPortPos.x || srcPortPos.y === tgtPortPos.y) {
+    const directRoute = [srcPortPos, tgtPortPos];
+    if (isRouteValid(directRoute, allBoxes)) return directRoute;
+  }
+
   // Exit and entry anchors — clearance away from the port, perpendicular to face
   const sa = offsetInDirection(srcPortPos, exitDir, ROUTE_CLEARANCE);
   const ta = offsetInDirection(tgtPortPos, tgtExitDir, ROUTE_CLEARANCE);
@@ -311,7 +332,7 @@ export function getSmartRoutePoints(
 
   for (const mid of candidates) {
     const route = [sa, ...mid, ta];
-    if (isRouteValid(route, srcBox, tgtBox)) {
+    if (isRouteValid(route, allBoxes)) {
       return removeCollinear([srcPortPos, sa, ...mid, ta, tgtPortPos]);
     }
   }
@@ -358,36 +379,15 @@ export function pointsToPath(points: Point[]): string {
 }
 
 // ---------------------------------------------------------------------------
-// Simple midpoint routing (used for temporary drag line only)
+// Temp connection routing (drag preview — uses same router as final lines)
 // ---------------------------------------------------------------------------
 
-function getOrthogonalRoute(
-  from: Point,
-  to: Point,
-  sourcePort?: PortSide,
-): string {
-  const sourceHorizontal = sourcePort === 'left' || sourcePort === 'right';
-  if (sourceHorizontal || !sourcePort) {
-    const midX = (from.x + to.x) / 2;
-    return `M ${from.x} ${from.y} L ${midX} ${from.y} L ${midX} ${to.y} L ${to.x} ${to.y}`;
-  }
-  const midY = (from.y + to.y) / 2;
-  return `M ${from.x} ${from.y} L ${from.x} ${midY} L ${to.x} ${midY} L ${to.x} ${to.y}`;
-}
-
-/**
- * Returns an orthogonal SVG path for the temporary connection line
- * (from a port to the current cursor position — no target component available).
- */
-export function getTempConnectionPath(
-  from: Point,
-  to: Point,
-  sourcePort: PortSide,
-): string {
-  if (from.x === to.x || from.y === to.y) {
-    return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
-  }
-  return getOrthogonalRoute(from, to, sourcePort);
+/** Returns the opposite port side (used to synthesize a target for temp routing). */
+export function oppositePort(port: PortSide): PortSide {
+  const map: Record<PortSide, PortSide> = {
+    top: 'bottom', bottom: 'top', left: 'right', right: 'left',
+  };
+  return map[port];
 }
 
 /**

@@ -48,9 +48,31 @@ function CylinderIconVisual({ size }: { size: 'sm' | 'md' }) {
   );
 }
 
+function EntityRelationTablePreview({ size }: { size: 'sm' | 'md' }) {
+  const containerDim = size === 'sm' ? 'w-10 h-8' : 'w-14 h-11';
+  const rowH = size === 'sm' ? 'h-1.5' : 'h-2';
+  return (
+    <div
+      aria-hidden="true"
+      className={`${containerDim} rounded-sm border border-white/70 flex flex-col overflow-hidden bg-gray-900`}
+    >
+      <div className="w-full h-2.5 border-b border-white/70 flex items-center justify-center">
+        <div className="w-4 h-1 rounded-sm bg-white/60" />
+      </div>
+      {[0, 1, 2].map((i) => (
+        <div key={i} className={`w-full ${rowH} border-b border-white/30 flex items-center gap-0.5 px-0.5`}>
+          <div className="w-2 h-1 rounded-sm bg-blue-400/60 shrink-0" />
+          <div className="flex-1 h-0.5 rounded bg-white/30" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const COMPLEX_VISUALS: Record<string, (size: 'sm' | 'md') => React.ReactNode> = {
-  'server-rack':   (size) => <ServerRackVisual size={size} />,
-  'cylinder-icon': (size) => <CylinderIconVisual size={size} />,
+  'server-rack':            (size) => <ServerRackVisual size={size} />,
+  'cylinder-icon':          (size) => <CylinderIconVisual size={size} />,
+  'entity-relation-table':  (size) => <EntityRelationTablePreview size={size} />,
 };
 
 // ─── Fallback for unknown kinds ───────────────────────────────────────────────

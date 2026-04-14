@@ -26,7 +26,13 @@ interface CanvasViewportProps {
   onResizeFrame: (id: string, width: number, height: number, x: number, y: number) => void;
   onSetComponentFrame: (componentId: string, frameId: string | null) => void;
   onHighlightFrame: (id: string | null) => void;
+  onUpdateTableHeader: (id: string, header: string) => void;
+  onAddTableRow: (id: string, rowId?: string, name?: string) => void;
+  onRemoveTableRow: (id: string, rowId: string) => void;
+  onRenameTableRow: (id: string, rowId: string, name: string) => void;
+  onCycleTableKey: (id: string, rowId: string) => void;
 }
+
 
 export function CanvasViewport({
   transform,
@@ -51,6 +57,11 @@ export function CanvasViewport({
   onResizeFrame,
   onSetComponentFrame,
   onHighlightFrame,
+  onUpdateTableHeader,
+  onAddTableRow,
+  onRemoveTableRow,
+  onRenameTableRow,
+  onCycleTableKey,
 }: CanvasViewportProps) {
   const { scale, translateX, translateY } = transform;
 
@@ -107,6 +118,11 @@ export function CanvasViewport({
           frames={frames}
           onSetComponentFrame={onSetComponentFrame}
           onHighlightFrame={onHighlightFrame}
+          onUpdateTableHeader={onUpdateTableHeader}
+          onAddTableRow={onAddTableRow}
+          onRemoveTableRow={onRemoveTableRow}
+          onRenameTableRow={onRenameTableRow}
+          onCycleTableKey={onCycleTableKey}
         />
       ))}
     </div>

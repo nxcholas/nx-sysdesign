@@ -72,6 +72,12 @@ export interface CanvasRootProps {
   handlePointerMove: (e: React.PointerEvent) => void;
   handlePointerUp: (e: React.PointerEvent) => void;
   resetTransform: () => void;
+  // Callbacks — entity relation table
+  updateTableHeader: (id: string, header: string) => void;
+  addTableRow: (id: string, rowId?: string, name?: string) => void;
+  removeTableRow: (id: string, rowId: string) => void;
+  renameTableRow: (id: string, rowId: string, name: string) => void;
+  cycleTableKey: (id: string, rowId: string) => void;
   // Diagram persistence callback
   onStateChange: () => void;
 }
@@ -104,6 +110,11 @@ export function CanvasRoot(props: CanvasRootProps) {
     renameComponent,
     resizeFrame,
     setComponentFrame,
+    updateTableHeader,
+    addTableRow,
+    removeTableRow,
+    renameTableRow,
+    cycleTableKey,
     didPanRef,
     spaceHeldRef,
     ctrlHeldRef,
@@ -169,8 +180,11 @@ export function CanvasRoot(props: CanvasRootProps) {
     const handler = (e: KeyboardEvent) => {
       if (selectedIds.length === 0 && !selectedConnectionId && !selectedFrameId) return;
       if (e.key !== 'Delete' && e.key !== 'Backspace') return;
-      const tag = (document.activeElement as HTMLElement)?.tagName;
+      const active = document.activeElement as HTMLElement | null;
+      if (!active) return;
+      const tag = active.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (active.isContentEditable) return;
       e.preventDefault();
       if (selectedFrameId) {
         removeFrame(selectedFrameId);
@@ -445,6 +459,11 @@ export function CanvasRoot(props: CanvasRootProps) {
         onResizeFrame={resizeFrame}
         onSetComponentFrame={setComponentFrame}
         onHighlightFrame={setHighlightedFrameId}
+        onUpdateTableHeader={updateTableHeader}
+        onAddTableRow={addTableRow}
+        onRemoveTableRow={removeTableRow}
+        onRenameTableRow={renameTableRow}
+        onCycleTableKey={cycleTableKey}
       />
 
       {/* Connections overlay — rendered AFTER viewport so hit areas are above frames/components */}

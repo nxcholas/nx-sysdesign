@@ -12,6 +12,14 @@ import type {
 } from '@/lib/types';
 import { getFrameBounds } from '@/lib/frame-utils';
 import { FRAME_DEFAULT_LABEL } from '@/lib/constants';
+import {
+  addRow as addTableRow,
+  removeRow as removeTableRow,
+  renameRow as renameTableRow,
+  cycleKeyType as cycleTableKey,
+  createDefaultTableData,
+} from '@/lib/entity-relation';
+import type { EntityRelationRow } from '@/lib/types';
 
 function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
   switch (action.type) {
@@ -170,6 +178,80 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
         ),
       };
     }
+    case 'UPDATE_TABLE_HEADER': {
+      return {
+        ...state,
+        placedComponents: state.placedComponents.map((c) =>
+          c.id === action.id && c.tableData
+            ? { ...c, tableData: { ...c.tableData, header: action.header } }
+            : c
+        ),
+      };
+    }
+    case 'ADD_TABLE_ROW': {
+      return {
+        ...state,
+        placedComponents: state.placedComponents.map((c) =>
+          c.id === action.id && c.tableData
+            ? {
+                ...c,
+                tableData: {
+                  ...c.tableData,
+                  rows: addTableRow(c.tableData.rows, action.rowId, action.name ?? ''),
+                },
+              }
+            : c
+        ),
+      };
+    }
+    case 'REMOVE_TABLE_ROW': {
+      return {
+        ...state,
+        placedComponents: state.placedComponents.map((c) =>
+          c.id === action.id && c.tableData
+            ? {
+                ...c,
+                tableData: {
+                  ...c.tableData,
+                  rows: removeTableRow(c.tableData.rows, action.rowId),
+                },
+              }
+            : c
+        ),
+      };
+    }
+    case 'RENAME_TABLE_ROW': {
+      return {
+        ...state,
+        placedComponents: state.placedComponents.map((c) =>
+          c.id === action.id && c.tableData
+            ? {
+                ...c,
+                tableData: {
+                  ...c.tableData,
+                  rows: renameTableRow(c.tableData.rows, action.rowId, action.name),
+                },
+              }
+            : c
+        ),
+      };
+    }
+    case 'CYCLE_TABLE_KEY': {
+      return {
+        ...state,
+        placedComponents: state.placedComponents.map((c) =>
+          c.id === action.id && c.tableData
+            ? {
+                ...c,
+                tableData: {
+                  ...c.tableData,
+                  rows: cycleTableKey(c.tableData.rows, action.rowId),
+                },
+              }
+            : c
+        ),
+      };
+    }
     case 'SET_COMPONENT_FRAME': {
       const updated = state.placedComponents.map((c) =>
         c.id === action.componentId ? { ...c, frameId: action.frameId ?? undefined } : c
@@ -181,9 +263,20 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
         ...action.payload.components.map((c) => c.zIndex),
         ...action.payload.frames.map((f) => f.zIndex),
       ];
+      // Normalize legacy rows that used isPrimaryKey boolean instead of keyType
+      const normalizeRow = (r: any): EntityRelationRow => ({
+        id: r.id,
+        name: r.name,
+        keyType: r.keyType ?? (r.isPrimaryKey ? 'PK' : 'none'),
+      });
+      const normalizedComponents = action.payload.components.map((c) =>
+        c.tableData
+          ? { ...c, tableData: { ...c.tableData, rows: c.tableData.rows.map(normalizeRow) } }
+          : c
+      );
       return {
         ...initialState,
-        placedComponents: action.payload.components,
+        placedComponents: normalizedComponents,
         connections: action.payload.connections,
         frames: action.payload.frames,
         nextZIndex: allZIndexes.length === 0 ? 1 : Math.max(...allZIndexes) + 1,
@@ -209,7 +302,11 @@ export function usePlacedComponents() {
 
   const addComponent = useCallback(
     (kind: PaletteItemKind, x: number, y: number, width: number, height: number, frameId?: string) => {
-      dispatch({ type: 'ADD', payload: { kind, x, y, width, height, frameId } });
+      const tableData =
+        kind.type === 'block' && kind.kind === 'entity-relation-table'
+          ? createDefaultTableData()
+          : undefined;
+      dispatch({ type: 'ADD', payload: { kind, x, y, width, height, frameId, tableData } });
     },
     []
   );
@@ -297,6 +394,29 @@ export function usePlacedComponents() {
     dispatch({ type: 'SET_COMPONENT_FRAME', componentId, frameId });
   }, []);
 
+  const updateTableHeader = useCallback((id: string, header: string) => {
+    dispatch({ type: 'UPDATE_TABLE_HEADER', id, header });
+  }, []);
+
+  const addTableRowAction = useCallback(
+    (id: string, rowId?: string, name?: string) => {
+      dispatch({ type: 'ADD_TABLE_ROW', id, rowId, name });
+    },
+    []
+  );
+
+  const removeTableRowAction = useCallback((id: string, rowId: string) => {
+    dispatch({ type: 'REMOVE_TABLE_ROW', id, rowId });
+  }, []);
+
+  const renameTableRowAction = useCallback((id: string, rowId: string, name: string) => {
+    dispatch({ type: 'RENAME_TABLE_ROW', id, rowId, name });
+  }, []);
+
+  const cycleTableKeyAction = useCallback((id: string, rowId: string) => {
+    dispatch({ type: 'CYCLE_TABLE_KEY', id, rowId });
+  }, []);
+
   const loadDiagram = useCallback(
     (schema: Pick<DiagramSchema, 'components' | 'connections' | 'frames'>) => {
       dispatch({ type: 'LOAD_DIAGRAM', payload: schema });
@@ -331,5 +451,10 @@ export function usePlacedComponents() {
     resizeFrame,
     setComponentFrame,
     loadDiagram,
+    updateTableHeader,
+    addTableRow: addTableRowAction,
+    removeTableRow: removeTableRowAction,
+    renameTableRow: renameTableRowAction,
+    cycleTableKey: cycleTableKeyAction,
   };
 }

@@ -72,6 +72,19 @@ export interface Frame {
 
 // --- Placed Component Types ---
 
+export type RowKeyType = 'PK' | 'FK' | 'none';
+
+export interface EntityRelationRow {
+  id: string;
+  name: string;
+  keyType: RowKeyType;
+}
+
+export interface EntityRelationData {
+  header: string;
+  rows: EntityRelationRow[];
+}
+
 export interface PlacedComponent {
   id: string;
   kind: PaletteItemKind;
@@ -82,6 +95,8 @@ export interface PlacedComponent {
   label?: string;
   zIndex: number;
   frameId?: string;
+  /** Only populated when kind is a block with kind 'entity-relation-table'. */
+  tableData?: EntityRelationData;
 }
 
 // --- Connection Types ---
@@ -117,6 +132,11 @@ export type CanvasAction =
   | { type: 'RENAME_COMPONENT'; id: string; label: string }
   | { type: 'RESIZE_FRAME'; id: string; width: number; height: number; x: number; y: number }
   | { type: 'SET_COMPONENT_FRAME'; componentId: string; frameId: string | null }
+  | { type: 'UPDATE_TABLE_HEADER'; id: string; header: string }
+  | { type: 'ADD_TABLE_ROW'; id: string; rowId?: string; name?: string; focus?: boolean }
+  | { type: 'REMOVE_TABLE_ROW'; id: string; rowId: string }
+  | { type: 'RENAME_TABLE_ROW'; id: string; rowId: string; name: string }
+  | { type: 'CYCLE_TABLE_KEY'; id: string; rowId: string }
   | { type: 'LOAD_DIAGRAM'; payload: Pick<DiagramSchema, 'components' | 'connections' | 'frames'> };
 
 export interface CanvasState {

@@ -24,7 +24,8 @@ export type BlockCategory =
   | 'security'
   | 'monitoring'
   | 'data'
-  | 'external';
+  | 'external'
+  | 'entity-relation';
 
 export interface BlockVisual {
   shape: IconShape;
@@ -1362,6 +1363,28 @@ const REGISTRY_ARRAY: BlockDefinition[] = [
     },
   },
 
+  // ─── Entity Relation ─────────────────────────────────────────────────────
+
+  {
+    kind: 'entity-relation-table',
+    label: 'Table',
+    category: 'entity-relation',
+    sortOrder: 0,
+    role: 'entity',
+    defaultWidth: 240,
+    defaultHeight: 160,
+    minWidth: 200,
+    minHeight: 120,
+    visual: {
+      shape: 'rect',
+      bgClass: 'bg-transparent',
+      borderClass: 'border-white/70',
+      iconColorClass: 'text-white',
+      svgPaths: [],
+      complexVisualKey: 'entity-relation-table',
+    },
+  },
+
   // ─── External Services ────────────────────────────────────────────────────
 
   {
@@ -1545,7 +1568,8 @@ const CATEGORY_META: { id: BlockCategory; label: string; defaultOpen: boolean }[
   { id: 'security',   label: 'Security & Identity',         defaultOpen: false },
   { id: 'monitoring', label: 'Monitoring & Observability',  defaultOpen: false },
   { id: 'data',       label: 'Data Processing',             defaultOpen: false },
-  { id: 'external',   label: 'External Services',           defaultOpen: false },
+  { id: 'external',        label: 'External Services',           defaultOpen: false },
+  { id: 'entity-relation', label: 'Entity Relation',             defaultOpen: true  },
 ];
 
 export function getAllCategories(): CategoryMeta[] {

@@ -5,6 +5,7 @@ import type { PlacedComponent, CanvasTransform, PortSide, Frame } from '@/lib/ty
 import { HttpMethodBadge } from '@/components/features/blocks/http-method-badge';
 import { StatusCodeBadge } from '@/components/features/blocks/status-code-badge';
 import { BlockRenderer } from '@/components/features/blocks/block-renderer';
+import { EntityRelationTable } from '@/components/features/blocks/entity-relation-table';
 import { DeleteButton } from './delete-button';
 import { ResizeHandles } from './resize-handles';
 import { ConnectionPort } from './connection-port';
@@ -27,9 +28,34 @@ interface PlacedComponentItemProps {
   frames: Frame[];
   onSetComponentFrame: (componentId: string, frameId: string | null) => void;
   onHighlightFrame: (id: string | null) => void;
+  onUpdateTableHeader: (id: string, header: string) => void;
+  onAddTableRow: (id: string, rowId?: string, name?: string) => void;
+  onRemoveTableRow: (id: string, rowId: string) => void;
+  onRenameTableRow: (id: string, rowId: string, name: string) => void;
+  onCycleTableKey: (id: string, rowId: string) => void;
 }
 
-function ComponentVisual({ component, onRename }: { component: PlacedComponent; onRename: (id: string, label: string) => void }) {
+interface ComponentVisualProps {
+  component: PlacedComponent;
+  isSelected: boolean;
+  onRename: (id: string, label: string) => void;
+  onUpdateTableHeader: (id: string, header: string) => void;
+  onAddTableRow: (id: string, rowId?: string, name?: string) => void;
+  onRemoveTableRow: (id: string, rowId: string) => void;
+  onRenameTableRow: (id: string, rowId: string, name: string) => void;
+  onCycleTableKey: (id: string, rowId: string) => void;
+}
+
+function ComponentVisual({
+  component,
+  isSelected,
+  onRename,
+  onUpdateTableHeader,
+  onAddTableRow,
+  onRemoveTableRow,
+  onRenameTableRow,
+  onCycleTableKey,
+}: ComponentVisualProps) {
   const { kind } = component;
 
   if (kind.type === 'http-method') {
@@ -39,6 +65,20 @@ function ComponentVisual({ component, onRename }: { component: PlacedComponent; 
     return <StatusCodeBadge group={kind.group} code={kind.code} label={kind.label} size="md" />;
   }
   if (kind.type === 'block') {
+    if (kind.kind === 'entity-relation-table' && component.tableData) {
+      return (
+        <EntityRelationTable
+          componentId={component.id}
+          tableData={component.tableData}
+          isSelected={isSelected}
+          onUpdateHeader={(header) => onUpdateTableHeader(component.id, header)}
+          onAddRow={(rowId, name) => onAddTableRow(component.id, rowId, name)}
+          onRemoveRow={(rowId) => onRemoveTableRow(component.id, rowId)}
+          onRenameRow={(rowId, name) => onRenameTableRow(component.id, rowId, name)}
+          onCycleKey={(rowId) => onCycleTableKey(component.id, rowId)}
+        />
+      );
+    }
     return (
       <BlockRenderer
         kind={kind.kind}
@@ -69,6 +109,11 @@ export function PlacedComponentItem({
   frames,
   onSetComponentFrame,
   onHighlightFrame,
+  onUpdateTableHeader,
+  onAddTableRow,
+  onRemoveTableRow,
+  onRenameTableRow,
+  onCycleTableKey,
 }: PlacedComponentItemProps) {
   const dragStartRef = useRef<{
     pointerX: number;
@@ -160,7 +205,16 @@ export function PlacedComponentItem({
           : 'hover:ring-1 hover:ring-gray-500'
         }`}
     >
-      <ComponentVisual component={component} onRename={onRename} />
+      <ComponentVisual
+        component={component}
+        isSelected={isSelected}
+        onRename={onRename}
+        onUpdateTableHeader={onUpdateTableHeader}
+        onAddTableRow={onAddTableRow}
+        onRemoveTableRow={onRemoveTableRow}
+        onRenameTableRow={onRenameTableRow}
+        onCycleTableKey={onCycleTableKey}
+      />
 
       {/* Connection ports — visible on hover or when connection dragging */}
       {PORT_SIDES.map((side) => (

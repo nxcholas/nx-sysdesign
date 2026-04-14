@@ -79,6 +79,11 @@ export default function Page() {
           renameComponent={canvasHook.renameComponent}
           resizeFrame={canvasHook.resizeFrame}
           setComponentFrame={canvasHook.setComponentFrame}
+          updateTableHeader={canvasHook.updateTableHeader}
+          addTableRow={canvasHook.addTableRow}
+          removeTableRow={canvasHook.removeTableRow}
+          renameTableRow={canvasHook.renameTableRow}
+          cycleTableKey={canvasHook.cycleTableKey}
           transform={canvasTransformHook.transform}
           canvasRef={canvasRef}
           didPanRef={canvasTransformHook.didPanRef}

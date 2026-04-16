@@ -15,7 +15,6 @@ interface EntityRelationTableProps {
   onRenameRow: (rowId: string, name: string) => void;
   onCycleKey: (rowId: string) => void;
   onConnectionDragStart: (componentId: string, port: RowPortSide, e: React.PointerEvent) => void;
-  onConnectionDragEnd: (componentId: string, port: RowPortSide) => void;
 }
 
 export function EntityRelationTable({
@@ -29,7 +28,6 @@ export function EntityRelationTable({
   onRenameRow,
   onCycleKey,
   onConnectionDragStart,
-  onConnectionDragEnd,
 }: EntityRelationTableProps) {
   const { header, rows } = tableData;
 

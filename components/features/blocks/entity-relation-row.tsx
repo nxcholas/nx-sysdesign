@@ -84,7 +84,6 @@ export function EntityRelationRowItem({
     [commit, row.name]
   );
 
-  const isActive = row.keyType !== 'none';
   const fieldCellBase =
     'flex-1 min-w-0 flex items-center px-2 font-mono text-xs text-gray-100 h-7 overflow-hidden';
   const pkFieldStyle = row.keyType === 'PK'
@@ -135,8 +134,7 @@ export function EntityRelationRowItem({
       <button
         type="button"
         role="cell"
-        aria-label={`Cycle key type for ${row.name || 'row'}`}
-        aria-description={row.keyType}
+        aria-label={`Cycle key type for ${row.name || 'row'} (current: ${row.keyType})`}
         onClick={(e) => {
           e.stopPropagation();
           onCycleKey(row.id);

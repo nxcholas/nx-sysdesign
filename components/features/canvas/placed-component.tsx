@@ -48,7 +48,6 @@ interface ComponentVisualProps {
   onRenameTableRow: (id: string, rowId: string, name: string) => void;
   onCycleTableKey: (id: string, rowId: string) => void;
   onConnectionDragStart: (componentId: string, port: RowPortSide, e: React.PointerEvent) => void;
-  onConnectionDragEnd: (componentId: string, port: RowPortSide) => void;
 }
 
 function ComponentVisual({
@@ -64,7 +63,6 @@ function ComponentVisual({
   onRenameTableRow,
   onCycleTableKey,
   onConnectionDragStart,
-  onConnectionDragEnd,
 }: ComponentVisualProps) {
   const { kind } = component;
 
@@ -88,7 +86,6 @@ function ComponentVisual({
           onRenameRow={(rowId, name) => onRenameTableRow(component.id, rowId, name)}
           onCycleKey={(rowId) => onCycleTableKey(component.id, rowId)}
           onConnectionDragStart={onConnectionDragStart}
-          onConnectionDragEnd={onConnectionDragEnd}
         />
       );
     }
@@ -231,7 +228,6 @@ export function PlacedComponentItem({
         onRenameTableRow={onRenameTableRow}
         onCycleTableKey={onCycleTableKey}
         onConnectionDragStart={(compId, port, e) => onConnectionDragStart(compId, port, e)}
-        onConnectionDragEnd={(compId, port) => onConnectionDragEnd(compId, port)}
       />
 
       {/* Connection ports — visible on hover or when connection dragging */}

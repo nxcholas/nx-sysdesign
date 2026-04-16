@@ -32,7 +32,8 @@ export default function Page() {
 
   const onStateChange = useCallback(() => {
     diagrams.notifyStateChanged();
-  }, [diagrams.notifyStateChanged]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [diagrams]);
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden">

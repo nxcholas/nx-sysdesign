@@ -14,6 +14,10 @@ interface EntityRelationRowProps {
   flashError?: boolean;
   /** Callback so parent can clear the flash after animation. */
   onFlashEnd?: () => void;
+  /** Called when the user initiates a connection drag from this row's grip. */
+  onConnectionDragStart?: (side: 'left' | 'right', e: React.PointerEvent) => void;
+  /** When true, the connect grip remains visible even without hover. */
+  isConnectionDragging?: boolean;
 }
 
 export function EntityRelationRowItem({
@@ -24,6 +28,8 @@ export function EntityRelationRowItem({
   onCycleKey,
   flashError = false,
   onFlashEnd,
+  onConnectionDragStart,
+  isConnectionDragging = false,
 }: EntityRelationRowProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(row.name);
@@ -99,6 +105,32 @@ export function EntityRelationRowItem({
         ${flashError ? 'border-red-500 border animate-pulse' : ''}
       `}
     >
+      {/* Connect grip — left side, only on PK/FK rows */}
+      {row.keyType !== 'none' && (
+        <button
+          type="button"
+          aria-label={`Connect left from ${row.name || 'row'}`}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            onConnectionDragStart?.('left', e);
+          }}
+          className={`w-6 h-7 shrink-0 flex items-center justify-center
+            opacity-0 group-hover:opacity-100 transition-opacity
+            text-green-400 hover:text-green-300 cursor-crosshair
+            focus-visible:outline-2 focus-visible:outline-green-400
+            ${isConnectionDragging ? 'opacity-100' : ''}`}
+        >
+          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor" aria-hidden="true">
+            <circle cx="9" cy="7" r="1.5"/>
+            <circle cx="15" cy="7" r="1.5"/>
+            <circle cx="9" cy="12" r="1.5"/>
+            <circle cx="15" cy="12" r="1.5"/>
+            <circle cx="9" cy="17" r="1.5"/>
+            <circle cx="15" cy="17" r="1.5"/>
+          </svg>
+        </button>
+      )}
+
       {/* Key type cycle button */}
       <button
         type="button"
@@ -170,6 +202,32 @@ export function EntityRelationRowItem({
       >
         ×
       </button>
+
+      {/* Connect grip — right side, only on PK/FK rows */}
+      {row.keyType !== 'none' && (
+        <button
+          type="button"
+          aria-label={`Connect right from ${row.name || 'row'}`}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            onConnectionDragStart?.('right', e);
+          }}
+          className={`w-6 h-7 shrink-0 flex items-center justify-center
+            opacity-0 group-hover:opacity-100 transition-opacity
+            text-green-400 hover:text-green-300 cursor-crosshair
+            focus-visible:outline-2 focus-visible:outline-green-400
+            ${isConnectionDragging ? 'opacity-100' : ''}`}
+        >
+          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor" aria-hidden="true">
+            <circle cx="9" cy="7" r="1.5"/>
+            <circle cx="15" cy="7" r="1.5"/>
+            <circle cx="9" cy="12" r="1.5"/>
+            <circle cx="15" cy="12" r="1.5"/>
+            <circle cx="9" cy="17" r="1.5"/>
+            <circle cx="15" cy="17" r="1.5"/>
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

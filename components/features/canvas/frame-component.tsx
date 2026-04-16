@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useCallback } from 'react';
-import type { Frame, CanvasTransform, PortSide } from '@/lib/types';
+import type { Frame, CanvasTransform, PortSide, EdgePortSide } from '@/lib/types';
 import type { ConnectionDragState } from '@/hooks/use-connection-drag';
 import { snapToGrid } from '@/lib/canvas-utils';
 import { GRID_SIZE } from '@/lib/constants';
@@ -26,7 +26,7 @@ interface FrameComponentProps {
   highlightedPorts: Set<string>;
 }
 
-const PORT_SIDES: PortSide[] = ['top', 'right', 'bottom', 'left'];
+const PORT_SIDES: EdgePortSide[] = ['top', 'right', 'bottom', 'left'];
 
 export function FrameComponent({
   frame,

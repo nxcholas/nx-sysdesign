@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { PortSide, CanvasTransform, PlacedComponent, Frame } from '@/lib/types';
 import { screenToCanvas } from '@/lib/canvas-utils';
-import { findPortAtPosition } from '@/lib/connection-utils';
+import { findPortAtPosition, getPortPosition, isRowPort } from '@/lib/connection-utils';
 
 export interface ConnectionDragState {
   active: boolean;
@@ -76,26 +76,46 @@ export function useConnectionDrag(
       activeRef.current = true;
       sourceRef.current = { id: componentId, port };
 
-      const canvasPos = screenToCanvas(e.clientX, e.clientY, canvasRect, transform);
+      // For row ports, anchor the preview start at the port's canvas-space edge position
+      // rather than the cursor position (which is inside the table at the grip button).
+      let startX: number;
+      let startY: number;
+      if (isRowPort(port)) {
+        const comp = placedComponentsRef.current.find((c) => c.id === componentId);
+        if (comp) {
+          const portPos = getPortPosition(comp, port);
+          startX = portPos.x;
+          startY = portPos.y;
+        } else {
+          const canvasPos = screenToCanvas(e.clientX, e.clientY, canvasRect, transform);
+          startX = canvasPos.x;
+          startY = canvasPos.y;
+        }
+      } else {
+        const canvasPos = screenToCanvas(e.clientX, e.clientY, canvasRect, transform);
+        startX = canvasPos.x;
+        startY = canvasPos.y;
+      }
       setDragState({
         active: true,
         sourceId: componentId,
         sourcePort: port,
-        cursorX: canvasPos.x,
-        cursorY: canvasPos.y,
+        cursorX: startX,
+        cursorY: startY,
       });
       // Native window listeners — always fire regardless of which element is under the pointer
+      // Use canvasRect (passed at drag start) as the coordinate origin so that
+      // screenToCanvas uses the same reference frame as the toScreen transform in canvas-root.
       const onMove = (ev: PointerEvent) => {
         if (!activeRef.current) return;
-        const rect = containerRef.current?.getBoundingClientRect();
-        if (!rect) return;
+        const rect = canvasRect;
         const pos = screenToCanvas(ev.clientX, ev.clientY, rect, transformRef.current);
         setDragState((prev) => ({ ...prev, cursorX: pos.x, cursorY: pos.y }));
       };
 
       const onUp = (ev: PointerEvent) => {
         if (!activeRef.current) return;
-        const rect = containerRef.current?.getBoundingClientRect();
+        const rect = canvasRect;
         if (rect) {
           const pos = screenToCanvas(ev.clientX, ev.clientY, rect, transformRef.current);
           const hit = findPortAtPosition(
@@ -119,7 +139,7 @@ export function useConnectionDrag(
         window.removeEventListener('pointerup', onUp);
       };
     },
-    [containerRef, transformRef, placedComponentsRef, framesRef],
+    [transformRef, placedComponentsRef, framesRef],
   );
 
   // Cleanup on unmount

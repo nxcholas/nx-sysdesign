@@ -1,7 +1,6 @@
 'use client';
 
-import { useRef, useState, useCallback, useEffect } from 'react';
-import type React from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { useCanvasTool } from '@/hooks/use-canvas-tool';
 import { useDragDrop } from '@/hooks/use-drag-drop';
 import { useConnectionDrag } from '@/hooks/use-connection-drag';
@@ -16,13 +15,24 @@ import type {
   Connection,
   Frame,
   CanvasTransform,
+  Cardinality,
 } from '@/lib/types';
 import { isPointInsideFrame } from '@/lib/frame-utils';
-import { getSmartRoutePoints, pointsToPath, polylineMidpoint, oppositePort, truncatePolyline, PORT_HIT_RADIUS } from '@/lib/connection-utils';
+import { getSmartRoutePoints, pointsToPath, polylineMidpoint, oppositePort, truncatePolyline, PORT_HIT_RADIUS, isRowPort, getPortPosition } from '@/lib/connection-utils';
+import { getCardinalityGlyphPaths } from '@/lib/cardinality-glyph';
 import { buildFlowChains, composeFlowPath, FLOW_SPEED } from '@/lib/flow-chain';
 import { CanvasViewport } from './canvas-viewport';
 import { CanvasDropZone } from './canvas-drop-zone';
 import { CanvasToolbar } from './canvas-toolbar';
+import { ConnectionInspector } from '@/components/features/inspector/connection-inspector';
+
+/** Serialize a PortSide to a stable string key for the highlightedPorts set. */
+function portKey(componentId: string, port: PortSide): string {
+  if (isRowPort(port)) {
+    return `${componentId}:${port.side}:${port.rowId}`;
+  }
+  return `${componentId}:${port}`;
+}
 
 function getDimensions(kind: PaletteItemKind) {
   if (kind.type === 'block') {
@@ -78,6 +88,7 @@ export interface CanvasRootProps {
   removeTableRow: (id: string, rowId: string) => void;
   renameTableRow: (id: string, rowId: string, name: string) => void;
   cycleTableKey: (id: string, rowId: string) => void;
+  updateConnectionCardinality: (id: string, cardinality: Cardinality) => void;
   // Diagram persistence callback
   onStateChange: () => void;
 }
@@ -115,6 +126,7 @@ export function CanvasRoot(props: CanvasRootProps) {
     removeTableRow,
     renameTableRow,
     cycleTableKey,
+    updateConnectionCardinality,
     didPanRef,
     spaceHeldRef,
     ctrlHeldRef,
@@ -341,40 +353,16 @@ export function CanvasRoot(props: CanvasRootProps) {
       onDrop={onDrop}
       onClick={handleCanvasClick}
     >
-      {/* Connection delete button — positioned at midpoint of selected connection */}
+      {/* Connection inspector + delete button — shown when a connection is selected */}
       {selectedConnectionId && (() => {
         const conn = connections.find(c => c.id === selectedConnectionId);
         if (!conn) return null;
-        type EntityRect = { id: string; x: number; y: number; width: number; height: number };
-        const connEntityMap = new Map<string, EntityRect>([
-          ...placedComponents.map(c => [c.id, c] as [string, EntityRect]),
-          ...frames.map(f => [f.id, f] as [string, EntityRect]),
-        ]);
-        const source = connEntityMap.get(conn.sourceId);
-        const target = connEntityMap.get(conn.targetId);
-        if (!source || !target) return null;
-        const { scale: s, translateX: tx, translateY: ty } = transform;
-        const toScreen = (pt: { x: number; y: number }) => ({
-          x: pt.x * s + tx,
-          y: pt.y * s + ty,
-        });
-        const obstacles = placedComponents.filter(e => e.id !== conn.sourceId && e.id !== conn.targetId);
-        const points = getSmartRoutePoints(source, target, conn.sourcePort, conn.targetPort, obstacles);
-        const mid = polylineMidpoint(points.map(toScreen));
         return (
-          <button
-            type="button"
-            aria-label="Delete connection"
-            onClick={() => removeConnection(selectedConnectionId)}
-            onPointerDown={(e) => e.stopPropagation()}
-            style={{ position: 'absolute', left: mid.x - 10, top: mid.y - 10, zIndex: 10 }}
-            className="flex items-center justify-center w-5 h-5 rounded-full bg-red-600 hover:bg-red-500 text-white shadow-md transition-colors"
-          >
-            <svg width={10} height={10} viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="2" y1="2" x2="8" y2="8" />
-              <line x1="8" y1="2" x2="2" y2="8" />
-            </svg>
-          </button>
+          <ConnectionInspector
+            connection={conn}
+            onUpdateCardinality={updateConnectionCardinality}
+            onRemove={removeConnection}
+          />
         );
       })()}
 
@@ -442,8 +430,8 @@ export function CanvasRoot(props: CanvasRootProps) {
           if (selectedConnectionId) {
             const conn = connections.find(c => c.id === selectedConnectionId);
             if (conn) {
-              set.add(`${conn.sourceId}:${conn.sourcePort}`);
-              set.add(`${conn.targetId}:${conn.targetPort}`);
+              set.add(portKey(conn.sourceId, conn.sourcePort));
+              set.add(portKey(conn.targetId, conn.targetPort));
             }
           }
           return set;
@@ -493,13 +481,55 @@ export function CanvasRoot(props: CanvasRootProps) {
               // Frames are transparent containers — routes can pass through them freely.
               // Only placed components (visual blocks) count as routing obstacles.
               const obstacles = placedComponents.filter(e => e.id !== conn.sourceId && e.id !== conn.targetId);
-              const points = getSmartRoutePoints(source, target, conn.sourcePort, conn.targetPort, obstacles);
+              // Enrich source/target with tableData for row-port geometry
+              const sourceComp = placedComponents.find(c => c.id === conn.sourceId);
+              const targetComp = placedComponents.find(c => c.id === conn.targetId);
+              const sourceWithTable = sourceComp ? sourceComp : source;
+              const targetWithTable = targetComp ? targetComp : target;
+              const points = getSmartRoutePoints(sourceWithTable, targetWithTable, conn.sourcePort, conn.targetPort, obstacles);
               const screenPoints = points.map(toScreen);
               const pathD = pointsToPath(screenPoints);
               // Truncate hit area near ports so port dots can receive pointer events
               const hitPoints = truncatePolyline(screenPoints, PORT_HIT_RADIUS * scale);
               const hitPathD = pointsToPath(hitPoints);
               const isConnSelected = conn.id === selectedConnectionId;
+              const strokeColor = isConnSelected ? '#3b82f6' : '#6b7280';
+
+              // Cardinality glyphs (only when both ports are row ports with cardinality set)
+              const cardinalityGlyphs: React.ReactNode[] = [];
+              if (conn.cardinality && screenPoints.length >= 2) {
+                // Source end: first point is anchor, second defines direction
+                const srcAnchor = screenPoints[0]!;
+                const srcNext = screenPoints[1]!;
+                const srcDx = srcNext.x - srcAnchor.x;
+                const srcDy = srcNext.y - srcAnchor.y;
+                const srcLen = Math.sqrt(srcDx * srcDx + srcDy * srcDy);
+                if (srcLen > 0) {
+                  const srcDir = { dx: srcDx / srcLen, dy: srcDy / srcLen };
+                  const srcPaths = getCardinalityGlyphPaths(conn.cardinality.source, srcAnchor, srcDir);
+                  srcPaths.forEach((d, i) => {
+                    cardinalityGlyphs.push(
+                      <path key={`src-${i}`} d={d} fill="none" stroke={strokeColor} strokeWidth={1.5} strokeLinecap="round" style={{ pointerEvents: 'none' }} />
+                    );
+                  });
+                }
+                // Target end: last point is anchor, second-to-last defines direction
+                const tgtAnchor = screenPoints[screenPoints.length - 1]!;
+                const tgtPrev = screenPoints[screenPoints.length - 2]!;
+                const tgtDx = tgtPrev.x - tgtAnchor.x;
+                const tgtDy = tgtPrev.y - tgtAnchor.y;
+                const tgtLen = Math.sqrt(tgtDx * tgtDx + tgtDy * tgtDy);
+                if (tgtLen > 0) {
+                  const tgtDir = { dx: tgtDx / tgtLen, dy: tgtDy / tgtLen };
+                  const tgtPaths = getCardinalityGlyphPaths(conn.cardinality.target, tgtAnchor, tgtDir);
+                  tgtPaths.forEach((d, i) => {
+                    cardinalityGlyphs.push(
+                      <path key={`tgt-${i}`} d={d} fill="none" stroke={strokeColor} strokeWidth={1.5} strokeLinecap="round" style={{ pointerEvents: 'none' }} />
+                    );
+                  });
+                }
+              }
+
               return (
                 <g key={conn.id}>
                   {/* Invisible wide hit area for click detection — trimmed near ports */}
@@ -520,11 +550,13 @@ export function CanvasRoot(props: CanvasRootProps) {
                   <path
                     d={pathD}
                     fill="none"
-                    stroke={isConnSelected ? '#3b82f6' : '#6b7280'}
+                    stroke={strokeColor}
                     strokeWidth={isConnSelected ? 3 : 2}
                     strokeLinecap="round"
                     style={{ pointerEvents: 'none' }}
                   />
+                  {/* Cardinality glyphs */}
+                  {cardinalityGlyphs}
                 </g>
               );
             })}

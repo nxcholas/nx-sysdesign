@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback } from 'react';
-import type { PortSide } from '@/lib/types';
+import type { EdgePortSide } from '@/lib/types';
 
 interface ConnectionPortProps {
-  side: PortSide;
+  side: EdgePortSide;
   width: number;
   height: number;
   scale: number;
@@ -15,7 +15,7 @@ interface ConnectionPortProps {
   isConnectionDragging: boolean;
 }
 
-function getPortPosition(side: PortSide, width: number, height: number) {
+function getPortPosition(side: EdgePortSide, width: number, height: number) {
   switch (side) {
     case 'top':    return { left: width / 2, top: 0 };
     case 'right':  return { left: width, top: height / 2 };

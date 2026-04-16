@@ -1,13 +1,37 @@
-import type { PlacedComponent, PortSide, PaletteItemKind, ComponentRole } from './types';
+import type { PlacedComponent, PortSide, EdgePortSide, RowPortSide, PaletteItemKind, ComponentRole } from './types';
 import { getBlockDef } from './block-registry';
 
 type Rect = { x: number; y: number; width: number; height: number };
 
-/** Returns the canvas-space position of a port on a component/frame edge midpoint. */
+/** Type guard for RowPortSide. */
+export function isRowPort(side: PortSide): side is RowPortSide {
+  return typeof side === 'object' && side.kind === 'row';
+}
+
+/**
+ * Returns the canvas-space position of a port on a component edge.
+ * For EdgePortSide: returns midpoint of that edge.
+ * For RowPortSide: returns left/right edge at the vertical center of the named row.
+ *   Header = 32px, each row = 28px, so rowY = component.y + 32 + rowIndex * 28 + 14.
+ *   Requires the component to have tableData; falls back to left/right midpoint if not.
+ */
 export function getPortPosition(
-  component: Rect,
+  component: Rect & { tableData?: { rows: { id: string }[] } },
   side: PortSide
 ): { x: number; y: number } {
+  if (isRowPort(side)) {
+    const rows = component.tableData?.rows ?? [];
+    const rowIndex = rows.findIndex((r) => r.id === side.rowId);
+    // If the component has no tableData (e.g. the synthetic 1×1 preview target rect),
+    // fall back to the rect center so the preview line terminates at the cursor.
+    if (!component.tableData || rowIndex < 0) {
+      return { x: component.x + component.width / 2, y: component.y + component.height / 2 };
+    }
+    const rowY = component.y + 34 + rowIndex * 28 + 14; // 32px header + 2px header border-b
+    const rowX = side.side === 'left' ? component.x : component.x + component.width;
+    return { x: rowX, y: rowY };
+  }
+  // EdgePortSide
   switch (side) {
     case 'top':
       return { x: component.x + component.width / 2, y: component.y };
@@ -44,28 +68,66 @@ export function isValidDataFlow(source: PlacedComponent, target: PlacedComponent
   return true;
 }
 
-/** All port sides for iteration. */
-const PORT_SIDES: PortSide[] = ['top', 'right', 'bottom', 'left'];
+/** All edge port sides for iteration. */
+const EDGE_PORT_SIDES: EdgePortSide[] = ['top', 'right', 'bottom', 'left'];
 
 /** Hit-test radius in canvas-space pixels. */
 export const PORT_HIT_RADIUS = 16;
 
 /**
  * Find the closest port within hit radius at the given canvas-space position.
+ * For ER tables, row ports on PK/FK rows take priority over edge ports.
  * Searches both components and frames (frames have their own connection ports).
  * Returns { componentId, port } or null if nothing is close enough.
  */
 export function findPortAtPosition(
   canvasX: number,
   canvasY: number,
-  components: (PlacedComponent | Rect & { id: string })[],
+  components: (PlacedComponent | (Rect & { id: string }))[],
   excludeId?: string
 ): { componentId: string; port: PortSide } | null {
   let best: { componentId: string; port: PortSide; dist: number } | null = null;
 
   for (const comp of components) {
     if (comp.id === excludeId) continue;
-    for (const side of PORT_SIDES) {
+
+    // For ER tables: use rectangular row hit zones so dropping anywhere inside a
+    // row's Y band (and within the table's X bounds) selects that row port.
+    const placedComp = comp as PlacedComponent;
+    if (placedComp.tableData) {
+      const HEADER_H = 34; // 32px h-8 + 2px border-b
+      const ROW_H = 28;
+      const tableLeft = placedComp.x;
+      const tableRight = placedComp.x + placedComp.width;
+
+      // Only consider cursor within the table's horizontal bounds (with small padding)
+      if (canvasX >= tableLeft - PORT_HIT_RADIUS && canvasX <= tableRight + PORT_HIT_RADIUS) {
+        let rowIdx = 0;
+        for (const row of placedComp.tableData.rows) {
+          if (row.keyType !== 'none') {
+            const rowTop = placedComp.y + HEADER_H + rowIdx * ROW_H;
+            const rowBottom = rowTop + ROW_H;
+            if (canvasY >= rowTop && canvasY < rowBottom) {
+              // Cursor is inside this row's band — pick the nearer side port
+              const side: 'left' | 'right' = canvasX < (tableLeft + tableRight) / 2 ? 'left' : 'right';
+              const rowPort: RowPortSide = { kind: 'row', rowId: row.id, side };
+              const pos = getPortPosition(placedComp, rowPort);
+              const dx = canvasX - pos.x;
+              const dy = canvasY - pos.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (!best || dist < best.dist) {
+                best = { componentId: comp.id, port: rowPort, dist };
+              }
+              break;
+            }
+          }
+          rowIdx++;
+        }
+      }
+    }
+
+    // Probe edge ports (lower priority than row ports for ER tables when we already have a row port hit)
+    for (const side of EDGE_PORT_SIDES) {
       const pos = getPortPosition(comp, side);
       const dx = canvasX - pos.x;
       const dy = canvasY - pos.y;
@@ -94,7 +156,10 @@ interface BBox {
 }
 
 function portExitDirection(port: PortSide): Direction {
-  const map: Record<PortSide, Direction> = {
+  if (isRowPort(port)) {
+    return port.side === 'left' ? 'left' : 'right';
+  }
+  const map: Record<EdgePortSide, Direction> = {
     top: 'up', right: 'right', bottom: 'down', left: 'left',
   };
   return map[port];
@@ -294,9 +359,11 @@ function removeCollinear(points: Point[]): Point[] {
  *
  * Returns canvas-space points for the full route.
  */
+type RectWithTable = Rect & { tableData?: { rows: { id: string }[] } };
+
 export function getSmartRoutePoints(
-  source: Rect,
-  target: Rect,
+  source: RectWithTable,
+  target: RectWithTable,
   sourcePort: PortSide,
   targetPort: PortSide,
   obstacles?: Rect[],
@@ -384,7 +451,10 @@ export function pointsToPath(points: Point[]): string {
 
 /** Returns the opposite port side (used to synthesize a target for temp routing). */
 export function oppositePort(port: PortSide): PortSide {
-  const map: Record<PortSide, PortSide> = {
+  if (isRowPort(port)) {
+    return { kind: 'row', rowId: port.rowId, side: port.side === 'left' ? 'right' : 'left' };
+  }
+  const map: Record<EdgePortSide, EdgePortSide> = {
     top: 'bottom', bottom: 'top', left: 'right', right: 'left',
   };
   return map[port];

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useCallback } from 'react';
-import type { PlacedComponent, CanvasTransform, PortSide, Frame } from '@/lib/types';
+import type { PlacedComponent, CanvasTransform, PortSide, RowPortSide, EdgePortSide, Frame } from '@/lib/types';
 import { HttpMethodBadge } from '@/components/features/blocks/http-method-badge';
 import { StatusCodeBadge } from '@/components/features/blocks/status-code-badge';
 import { BlockRenderer } from '@/components/features/blocks/block-renderer';
@@ -38,23 +38,33 @@ interface PlacedComponentItemProps {
 interface ComponentVisualProps {
   component: PlacedComponent;
   isSelected: boolean;
+  scale: number;
+  isConnectionDragging: boolean;
+  highlightedPorts: Set<string>;
   onRename: (id: string, label: string) => void;
   onUpdateTableHeader: (id: string, header: string) => void;
   onAddTableRow: (id: string, rowId?: string, name?: string) => void;
   onRemoveTableRow: (id: string, rowId: string) => void;
   onRenameTableRow: (id: string, rowId: string, name: string) => void;
   onCycleTableKey: (id: string, rowId: string) => void;
+  onConnectionDragStart: (componentId: string, port: RowPortSide, e: React.PointerEvent) => void;
+  onConnectionDragEnd: (componentId: string, port: RowPortSide) => void;
 }
 
 function ComponentVisual({
   component,
   isSelected,
+  scale,
+  isConnectionDragging,
+  highlightedPorts,
   onRename,
   onUpdateTableHeader,
   onAddTableRow,
   onRemoveTableRow,
   onRenameTableRow,
   onCycleTableKey,
+  onConnectionDragStart,
+  onConnectionDragEnd,
 }: ComponentVisualProps) {
   const { kind } = component;
 
@@ -71,11 +81,14 @@ function ComponentVisual({
           componentId={component.id}
           tableData={component.tableData}
           isSelected={isSelected}
+          isConnectionDragging={isConnectionDragging}
           onUpdateHeader={(header) => onUpdateTableHeader(component.id, header)}
           onAddRow={(rowId, name) => onAddTableRow(component.id, rowId, name)}
           onRemoveRow={(rowId) => onRemoveTableRow(component.id, rowId)}
           onRenameRow={(rowId, name) => onRenameTableRow(component.id, rowId, name)}
           onCycleKey={(rowId) => onCycleTableKey(component.id, rowId)}
+          onConnectionDragStart={onConnectionDragStart}
+          onConnectionDragEnd={onConnectionDragEnd}
         />
       );
     }
@@ -91,7 +104,7 @@ function ComponentVisual({
   return null;
 }
 
-const PORT_SIDES: PortSide[] = ['top', 'right', 'bottom', 'left'];
+const PORT_SIDES: EdgePortSide[] = ['top', 'right', 'bottom', 'left'];
 
 export function PlacedComponentItem({
   component,
@@ -208,12 +221,17 @@ export function PlacedComponentItem({
       <ComponentVisual
         component={component}
         isSelected={isSelected}
+        scale={transform.scale}
+        isConnectionDragging={isConnectionDragging}
+        highlightedPorts={highlightedPorts}
         onRename={onRename}
         onUpdateTableHeader={onUpdateTableHeader}
         onAddTableRow={onAddTableRow}
         onRemoveTableRow={onRemoveTableRow}
         onRenameTableRow={onRenameTableRow}
         onCycleTableKey={onCycleTableKey}
+        onConnectionDragStart={(compId, port, e) => onConnectionDragStart(compId, port, e)}
+        onConnectionDragEnd={(compId, port) => onConnectionDragEnd(compId, port)}
       />
 
       {/* Connection ports — visible on hover or when connection dragging */}

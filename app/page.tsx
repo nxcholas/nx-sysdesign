@@ -84,6 +84,7 @@ export default function Page() {
           removeTableRow={canvasHook.removeTableRow}
           renameTableRow={canvasHook.renameTableRow}
           cycleTableKey={canvasHook.cycleTableKey}
+          updateConnectionCardinality={canvasHook.updateConnectionCardinality}
           transform={canvasTransformHook.transform}
           canvasRef={canvasRef}
           didPanRef={canvasTransformHook.didPanRef}

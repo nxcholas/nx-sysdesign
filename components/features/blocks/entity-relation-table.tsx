@@ -1,28 +1,35 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import type { EntityRelationData } from '@/lib/types';
+import type { EntityRelationData, RowPortSide } from '@/lib/types';
 import { EntityRelationRowItem } from './entity-relation-row';
 
 interface EntityRelationTableProps {
   componentId: string;
   tableData: EntityRelationData;
   isSelected: boolean;
+  isConnectionDragging: boolean;
   onUpdateHeader: (header: string) => void;
   onAddRow: (rowId?: string, name?: string) => void;
   onRemoveRow: (rowId: string) => void;
   onRenameRow: (rowId: string, name: string) => void;
   onCycleKey: (rowId: string) => void;
+  onConnectionDragStart: (componentId: string, port: RowPortSide, e: React.PointerEvent) => void;
+  onConnectionDragEnd: (componentId: string, port: RowPortSide) => void;
 }
 
 export function EntityRelationTable({
+  componentId,
   tableData,
   isSelected,
+  isConnectionDragging,
   onUpdateHeader,
   onAddRow,
   onRemoveRow,
   onRenameRow,
   onCycleKey,
+  onConnectionDragStart,
+  onConnectionDragEnd,
 }: EntityRelationTableProps) {
   const { header, rows } = tableData;
 
@@ -98,13 +105,7 @@ export function EntityRelationTable({
     <div
       role="table"
       aria-label={`${header} entity relation table`}
-      className="w-full h-full flex flex-col border-2 border-white/70 rounded-sm bg-[#0f1117] overflow-hidden font-mono text-xs text-gray-100 select-none"
-      onPointerDown={(e) => {
-        // Prevent pointer events inside the table from starting a drag on the wrapper
-        // unless it's directly on the table background (not on interactive cells).
-        // Cells stop propagation themselves; here we allow it through so the
-        // PlacedComponentItem drag still works when clicking the table border area.
-      }}
+      className="w-full h-full flex flex-col border-2 border-white/70 rounded-sm bg-[#0f1117] overflow-hidden font-mono text-xs text-gray-100 select-none relative"
     >
       {/* Header row */}
       <div
@@ -162,6 +163,8 @@ export function EntityRelationTable({
               onCycleKey={onCycleKey}
               flashError={flashRowId === row.id}
               onFlashEnd={() => setFlashRowId(null)}
+              onConnectionDragStart={(side, e) => onConnectionDragStart(componentId, { kind: 'row', rowId: row.id, side }, e)}
+              isConnectionDragging={isConnectionDragging}
             />
           ))
         ) : (

@@ -9,7 +9,9 @@ import type {
   Connection,
   Frame,
   DiagramSchema,
+  Cardinality,
 } from '@/lib/types';
+import { isRowPort } from '@/lib/connection-utils';
 import { getFrameBounds } from '@/lib/frame-utils';
 import { FRAME_DEFAULT_LABEL } from '@/lib/constants';
 import {
@@ -19,7 +21,19 @@ import {
   cycleKeyType as cycleTableKey,
   createDefaultTableData,
 } from '@/lib/entity-relation';
-import type { EntityRelationRow } from '@/lib/types';
+import type { EntityRelationRow, CardinalityEnd } from '@/lib/types';
+
+function migrateCardinalityEnd(end: any): CardinalityEnd {
+  if (end?.symbol) return end as CardinalityEnd;
+  // Legacy { min, max } → symbol
+  const m = end?.min;
+  const x = end?.max;
+  if (m === 1 && x === 1) return { symbol: 'one-and-only-one' };
+  if (m === 0 && x === 1) return { symbol: 'zero-or-one' };
+  if (m === 1 && x === 'many') return { symbol: 'one-or-many' };
+  if (m === 0 && x === 'many') return { symbol: 'zero-or-many' };
+  return { symbol: 'one-and-only-one' };
+}
 
 function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
   switch (action.type) {
@@ -82,9 +96,21 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
       };
     }
     case 'ADD_CONNECTION': {
+      const { sourceId, targetId, sourcePort, targetPort } = action.payload;
+      const sourceComp = state.placedComponents.find((c) => c.id === sourceId);
+      const targetComp = state.placedComponents.find((c) => c.id === targetId);
+      const isERRowConnection =
+        isRowPort(sourcePort) &&
+        isRowPort(targetPort) &&
+        sourceComp?.tableData !== undefined &&
+        targetComp?.tableData !== undefined;
+      const defaultCardinality: Cardinality | undefined = isERRowConnection
+        ? { source: { symbol: 'one-and-only-one' }, target: { symbol: 'one-or-many' } }
+        : undefined;
       const newConnection: Connection = {
         ...action.payload,
         id: crypto.randomUUID(),
+        ...(defaultCardinality ? { cardinality: defaultCardinality } : {}),
       };
       return {
         ...state,
@@ -189,35 +215,44 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
       };
     }
     case 'ADD_TABLE_ROW': {
+      // header=34px, each row=28px, add-button=28px
+      const TABLE_ROW_H = 28;
+      const TABLE_FIXED_H = 62; // header(34) + add-button(28)
       return {
         ...state,
-        placedComponents: state.placedComponents.map((c) =>
-          c.id === action.id && c.tableData
-            ? {
-                ...c,
-                tableData: {
-                  ...c.tableData,
-                  rows: addTableRow(c.tableData.rows, action.rowId, action.name ?? ''),
-                },
-              }
-            : c
-        ),
+        placedComponents: state.placedComponents.map((c) => {
+          if (!(c.id === action.id && c.tableData)) return c;
+          const newRows = addTableRow(c.tableData.rows, action.rowId, action.name ?? '');
+          const newHeight = newRows.length * TABLE_ROW_H + TABLE_FIXED_H;
+          return {
+            ...c,
+            height: Math.max(c.height, newHeight),
+            tableData: { ...c.tableData, rows: newRows },
+          };
+        }),
       };
     }
     case 'REMOVE_TABLE_ROW': {
+      const updatedComponents = state.placedComponents.map((c) =>
+        c.id === action.id && c.tableData
+          ? {
+              ...c,
+              tableData: {
+                ...c.tableData,
+                rows: removeTableRow(c.tableData.rows, action.rowId),
+              },
+            }
+          : c
+      );
+      const filteredConnections = state.connections.filter((conn) => {
+        const srcRowPort = isRowPort(conn.sourcePort) && conn.sourceId === action.id && conn.sourcePort.rowId === action.rowId;
+        const tgtRowPort = isRowPort(conn.targetPort) && conn.targetId === action.id && conn.targetPort.rowId === action.rowId;
+        return !srcRowPort && !tgtRowPort;
+      });
       return {
         ...state,
-        placedComponents: state.placedComponents.map((c) =>
-          c.id === action.id && c.tableData
-            ? {
-                ...c,
-                tableData: {
-                  ...c.tableData,
-                  rows: removeTableRow(c.tableData.rows, action.rowId),
-                },
-              }
-            : c
-        ),
+        placedComponents: updatedComponents,
+        connections: filteredConnections,
       };
     }
     case 'RENAME_TABLE_ROW': {
@@ -237,18 +272,39 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
       };
     }
     case 'CYCLE_TABLE_KEY': {
+      const updatedComponentsForKey = state.placedComponents.map((c) =>
+        c.id === action.id && c.tableData
+          ? {
+              ...c,
+              tableData: {
+                ...c.tableData,
+                rows: cycleTableKey(c.tableData.rows, action.rowId),
+              },
+            }
+          : c
+      );
+      // Cascade-delete connections if the row's new keyType is 'none'
+      const updatedComp = updatedComponentsForKey.find((c) => c.id === action.id);
+      const newKeyType = updatedComp?.tableData?.rows.find((r) => r.id === action.rowId)?.keyType;
+      let filteredConnectionsForKey = state.connections;
+      if (newKeyType === 'none') {
+        filteredConnectionsForKey = state.connections.filter((conn) => {
+          const srcRowPort = isRowPort(conn.sourcePort) && conn.sourceId === action.id && conn.sourcePort.rowId === action.rowId;
+          const tgtRowPort = isRowPort(conn.targetPort) && conn.targetId === action.id && conn.targetPort.rowId === action.rowId;
+          return !srcRowPort && !tgtRowPort;
+        });
+      }
       return {
         ...state,
-        placedComponents: state.placedComponents.map((c) =>
-          c.id === action.id && c.tableData
-            ? {
-                ...c,
-                tableData: {
-                  ...c.tableData,
-                  rows: cycleTableKey(c.tableData.rows, action.rowId),
-                },
-              }
-            : c
+        placedComponents: updatedComponentsForKey,
+        connections: filteredConnectionsForKey,
+      };
+    }
+    case 'UPDATE_CONNECTION_CARDINALITY': {
+      return {
+        ...state,
+        connections: state.connections.map((c) =>
+          c.id === action.id ? { ...c, cardinality: action.cardinality } : c
         ),
       };
     }
@@ -265,19 +321,30 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
       ];
       // Normalize legacy rows that used isPrimaryKey boolean instead of keyType
       const normalizeRow = (r: any): EntityRelationRow => ({
-        id: r.id,
-        name: r.name,
-        keyType: r.keyType ?? (r.isPrimaryKey ? 'PK' : 'none'),
+        id: typeof r.id === 'string' && r.id ? r.id : crypto.randomUUID(),
+        name: typeof r.name === 'string' ? r.name : '',
+        keyType: r.keyType === 'PK' || r.keyType === 'FK' ? r.keyType : (r.isPrimaryKey ? 'PK' : 'none'),
       });
       const normalizedComponents = action.payload.components.map((c) =>
         c.tableData
           ? { ...c, tableData: { ...c.tableData, rows: c.tableData.rows.map(normalizeRow) } }
           : c
       );
+      const normalizedConnections = action.payload.connections.map((conn) =>
+        conn.cardinality
+          ? {
+              ...conn,
+              cardinality: {
+                source: migrateCardinalityEnd(conn.cardinality.source),
+                target: migrateCardinalityEnd(conn.cardinality.target),
+              },
+            }
+          : conn
+      );
       return {
         ...initialState,
         placedComponents: normalizedComponents,
-        connections: action.payload.connections,
+        connections: normalizedConnections,
         frames: action.payload.frames,
         nextZIndex: allZIndexes.length === 0 ? 1 : Math.max(...allZIndexes) + 1,
       };
@@ -330,12 +397,25 @@ export function usePlacedComponents() {
   const addConnection = useCallback(
     (sourceId: string, sourcePort: PortSide, targetId: string, targetPort: PortSide) => {
       if (sourceId === targetId) return;
+      // Block same-row self-connections (left grip → right grip on the same row)
+      if (
+        isRowPort(sourcePort) &&
+        isRowPort(targetPort) &&
+        sourcePort.rowId === targetPort.rowId
+      ) return;
+      const portEqual = (a: PortSide, b: PortSide): boolean => {
+        if (typeof a === 'string' && typeof b === 'string') return a === b;
+        if (typeof a === 'object' && typeof b === 'object') {
+          return a.kind === b.kind && a.rowId === b.rowId && a.side === b.side;
+        }
+        return false;
+      };
       const exists = state.connections.some(
         (c) =>
           c.sourceId === sourceId &&
-          c.sourcePort === sourcePort &&
+          portEqual(c.sourcePort, sourcePort) &&
           c.targetId === targetId &&
-          c.targetPort === targetPort
+          portEqual(c.targetPort, targetPort)
       );
       if (exists) return;
       dispatch({ type: 'ADD_CONNECTION', payload: { sourceId, sourcePort, targetId, targetPort } });
@@ -417,6 +497,10 @@ export function usePlacedComponents() {
     dispatch({ type: 'CYCLE_TABLE_KEY', id, rowId });
   }, []);
 
+  const updateConnectionCardinality = useCallback((id: string, cardinality: Cardinality) => {
+    dispatch({ type: 'UPDATE_CONNECTION_CARDINALITY', id, cardinality });
+  }, []);
+
   const loadDiagram = useCallback(
     (schema: Pick<DiagramSchema, 'components' | 'connections' | 'frames'>) => {
       dispatch({ type: 'LOAD_DIAGRAM', payload: schema });
@@ -456,5 +540,6 @@ export function usePlacedComponents() {
     removeTableRow: removeTableRowAction,
     renameTableRow: renameTableRowAction,
     cycleTableKey: cycleTableKeyAction,
+    updateConnectionCardinality,
   };
 }

@@ -101,7 +101,33 @@ export interface PlacedComponent {
 
 // --- Connection Types ---
 
-export type PortSide = 'top' | 'right' | 'bottom' | 'left';
+export type EdgePortSide = 'top' | 'right' | 'bottom' | 'left';
+
+export type RowPortSide = {
+  kind: 'row';
+  rowId: string;
+  side: 'left' | 'right';
+};
+
+export type PortSide = EdgePortSide | RowPortSide;
+
+export type CardinalitySymbol =
+  | 'none'
+  | 'one'
+  | 'many'
+  | 'one-and-only-one'
+  | 'zero-or-one'
+  | 'one-or-many'
+  | 'zero-or-many';
+
+export type CardinalityEnd = {
+  symbol: CardinalitySymbol;
+};
+
+export type Cardinality = {
+  source: CardinalityEnd;
+  target: CardinalityEnd;
+};
 
 export interface Connection {
   id: string;
@@ -109,6 +135,7 @@ export interface Connection {
   sourcePort: PortSide;
   targetId: string;
   targetPort: PortSide;
+  cardinality?: Cardinality;
 }
 
 // --- Canvas Reducer ---
@@ -137,6 +164,7 @@ export type CanvasAction =
   | { type: 'REMOVE_TABLE_ROW'; id: string; rowId: string }
   | { type: 'RENAME_TABLE_ROW'; id: string; rowId: string; name: string }
   | { type: 'CYCLE_TABLE_KEY'; id: string; rowId: string }
+  | { type: 'UPDATE_CONNECTION_CARDINALITY'; id: string; cardinality: Cardinality }
   | { type: 'LOAD_DIAGRAM'; payload: Pick<DiagramSchema, 'components' | 'connections' | 'frames'> };
 
 export interface CanvasState {

@@ -1372,9 +1372,9 @@ const REGISTRY_ARRAY: BlockDefinition[] = [
     sortOrder: 0,
     role: 'entity',
     defaultWidth: 240,
-    defaultHeight: 160,
+    defaultHeight: 182,
     minWidth: 200,
-    minHeight: 120,
+    minHeight: 182,
     visual: {
       shape: 'rect',
       bgClass: 'bg-transparent',

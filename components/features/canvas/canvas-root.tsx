@@ -18,7 +18,7 @@ import type {
   Cardinality,
 } from '@/lib/types';
 import { isPointInsideFrame } from '@/lib/frame-utils';
-import { getSmartRoutePoints, pointsToPath, polylineMidpoint, oppositePort, truncatePolyline, PORT_HIT_RADIUS, isRowPort, getPortPosition } from '@/lib/connection-utils';
+import { getSmartRoutePoints, pointsToPath, oppositePort, truncatePolyline, PORT_HIT_RADIUS, isRowPort } from '@/lib/connection-utils';
 import { getCardinalityGlyphPaths } from '@/lib/cardinality-glyph';
 import { buildFlowChains, composeFlowPath, FLOW_SPEED } from '@/lib/flow-chain';
 import { CanvasViewport } from './canvas-viewport';
@@ -275,7 +275,7 @@ export function CanvasRoot(props: CanvasRootProps) {
         handleSelectionPointerDown(e);
       }
     },
-    [connectionActiveRef, activeTool, spaceHeldRef, handlePointerDown, handleFramePointerDown, handleSelectionPointerDown]
+    [connectionActiveRef, activeTool, spaceHeldRef, ctrlHeldRef, handlePointerDown, handleFramePointerDown, handleSelectionPointerDown]
   );
 
   const handleCanvasPointerMove = useCallback(

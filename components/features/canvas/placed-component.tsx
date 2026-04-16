@@ -38,9 +38,7 @@ interface PlacedComponentItemProps {
 interface ComponentVisualProps {
   component: PlacedComponent;
   isSelected: boolean;
-  scale: number;
   isConnectionDragging: boolean;
-  highlightedPorts: Set<string>;
   onRename: (id: string, label: string) => void;
   onUpdateTableHeader: (id: string, header: string) => void;
   onAddTableRow: (id: string, rowId?: string, name?: string) => void;
@@ -53,9 +51,7 @@ interface ComponentVisualProps {
 function ComponentVisual({
   component,
   isSelected,
-  scale,
   isConnectionDragging,
-  highlightedPorts,
   onRename,
   onUpdateTableHeader,
   onAddTableRow,
@@ -218,9 +214,7 @@ export function PlacedComponentItem({
       <ComponentVisual
         component={component}
         isSelected={isSelected}
-        scale={transform.scale}
         isConnectionDragging={isConnectionDragging}
-        highlightedPorts={highlightedPorts}
         onRename={onRename}
         onUpdateTableHeader={onUpdateTableHeader}
         onAddTableRow={onAddTableRow}

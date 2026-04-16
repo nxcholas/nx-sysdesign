@@ -125,8 +125,16 @@ const blockSections: PaletteSection[] = getAllCategories().map((cat) => ({
   })),
 }));
 
+const PRIORITY_CATEGORY_ORDER = ['entity-relation', 'client', 'compute', 'storage'];
+
 export const PALETTE_SECTIONS: PaletteSection[] = [
+  // Priority block sections in specified order
+  ...PRIORITY_CATEGORY_ORDER
+    .map((catId) => blockSections.find((s) => s.id === `blocks-${catId}`))
+    .filter((s): s is PaletteSection => s !== undefined),
+  // Remaining block sections not in the priority list
+  ...blockSections.filter((s) => !PRIORITY_CATEGORY_ORDER.some((catId) => s.id === `blocks-${catId}`)),
+  // HTTP helpers last
   httpMethodsSection,
   statusCodesSection,
-  ...blockSections,
 ];

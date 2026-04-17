@@ -72,7 +72,7 @@ export interface Frame {
 
 // --- Placed Component Types ---
 
-export type RowKeyType = 'PK' | 'FK' | 'none';
+export type RowKeyType = 'FK' | 'PK' | 'none';
 
 export interface EntityRelationRow {
   id: string;

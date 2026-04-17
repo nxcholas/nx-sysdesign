@@ -90,6 +90,8 @@ function ComponentVisual({
         kind={kind.kind}
         label={component.label}
         size="md"
+        canvasWidth={component.width}
+        canvasHeight={component.height}
         onRenameLabel={(newLabel) => onRename(component.id, newLabel)}
       />
     );

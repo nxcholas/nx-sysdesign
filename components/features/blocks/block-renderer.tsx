@@ -1,5 +1,19 @@
 'use client';
 
+import {
+  Globe, Cpu, Terminal, Puzzle, ShieldCheck, Settings2, Clock,
+  Webhook, Globe2, Flame, LayoutGrid, MapPin, Map, Lock,
+  KeyRound, BadgeCheck, AlertTriangle, HeartPulse, LayoutDashboard,
+  GitGraph, Timer, Link2, MessageSquare, CreditCard, PieChart,
+  type LucideIcon,
+} from 'lucide-react';
+import {
+  AwsApiGateway, AwsLoadBalancer, AwsEC2, AwsEKS, AwsRDS, AwsDynamoDB,
+  AwsS3, AwsEFS, AwsRedshift, AwsElastiCache, AwsCloudFront, AwsSQS,
+  AwsSNS, AwsEventBridge, AwsKinesis, AwsRoute53, AwsWAF, AwsVPC,
+  AwsCloudWatch, AwsIAM, AwsSecretsManager, AwsCognito, AwsOpenSearch,
+  AwsGlue, AwsCloudTrail, AwsSES, AwsDataLake, AwsLambda,
+} from '@/components/ui/aws-icons';
 import { getBlockDef } from '@/lib/block-registry';
 import { IconShapeContainer } from './icon-shapes';
 import { ComponentLabel } from '@/components/features/canvas/component-label';
@@ -8,13 +22,56 @@ interface BlockRendererProps {
   kind: string;
   label?: string;
   size?: 'sm' | 'md';
+  /**
+   * When provided (canvas mode), the icon fills the available space instead of
+   * using the fixed sm/md size tokens. AWS icons render without a shape container.
+   */
+  canvasWidth?: number;
+  canvasHeight?: number;
   /** When provided, the label becomes double-click editable. Only pass on canvas, not palette. */
   onRenameLabel?: (newLabel: string) => void;
 }
 
+// ─── Icon lookup maps ─────────────────────────────────────────────────────────
+
+const AWS_ICON_MAP: Record<string, (size: number) => React.ReactNode> = {
+  AwsApiGateway:    (s) => <AwsApiGateway size={s} />,
+  AwsLoadBalancer:  (s) => <AwsLoadBalancer size={s} />,
+  AwsEC2:           (s) => <AwsEC2 size={s} />,
+  AwsEKS:           (s) => <AwsEKS size={s} />,
+  AwsRDS:           (s) => <AwsRDS size={s} />,
+  AwsDynamoDB:      (s) => <AwsDynamoDB size={s} />,
+  AwsS3:            (s) => <AwsS3 size={s} />,
+  AwsEFS:           (s) => <AwsEFS size={s} />,
+  AwsRedshift:      (s) => <AwsRedshift size={s} />,
+  AwsElastiCache:   (s) => <AwsElastiCache size={s} />,
+  AwsCloudFront:    (s) => <AwsCloudFront size={s} />,
+  AwsSQS:           (s) => <AwsSQS size={s} />,
+  AwsSNS:           (s) => <AwsSNS size={s} />,
+  AwsEventBridge:   (s) => <AwsEventBridge size={s} />,
+  AwsKinesis:       (s) => <AwsKinesis size={s} />,
+  AwsRoute53:       (s) => <AwsRoute53 size={s} />,
+  AwsWAF:           (s) => <AwsWAF size={s} />,
+  AwsVPC:           (s) => <AwsVPC size={s} />,
+  AwsCloudWatch:    (s) => <AwsCloudWatch size={s} />,
+  AwsIAM:           (s) => <AwsIAM size={s} />,
+  AwsSecretsManager:(s) => <AwsSecretsManager size={s} />,
+  AwsCognito:       (s) => <AwsCognito size={s} />,
+  AwsOpenSearch:    (s) => <AwsOpenSearch size={s} />,
+  AwsGlue:          (s) => <AwsGlue size={s} />,
+  AwsCloudTrail:    (s) => <AwsCloudTrail size={s} />,
+  AwsSES:           (s) => <AwsSES size={s} />,
+  AwsDataLake:      (s) => <AwsDataLake size={s} />,
+};
+
+const LUCIDE_ICON_MAP: Record<string, LucideIcon> = {
+  Globe, Cpu, Terminal, Puzzle, ShieldCheck, Settings2, Clock,
+  Webhook, Globe2, Flame, LayoutGrid, MapPin, Map, Lock,
+  KeyRound, BadgeCheck, AlertTriangle, HeartPulse, LayoutDashboard,
+  GitGraph, Timer, Link2, MessageSquare, CreditCard, PieChart,
+};
+
 // ─── Complex Visuals ──────────────────────────────────────────────────────────
-// CSS-constructed visuals for the small set of blocks that can't be expressed
-// as an SVG path inside a shape container. Keyed by complexVisualKey.
 
 function ServerRackVisual({ size }: { size: 'sm' | 'md' }) {
   const containerDim = size === 'sm' ? 'w-8 h-6' : 'w-12 h-9';
@@ -69,10 +126,25 @@ function EntityRelationTablePreview({ size }: { size: 'sm' | 'md' }) {
   );
 }
 
-const COMPLEX_VISUALS: Record<string, (size: 'sm' | 'md') => React.ReactNode> = {
-  'server-rack':            (size) => <ServerRackVisual size={size} />,
-  'cylinder-icon':          (size) => <CylinderIconVisual size={size} />,
-  'entity-relation-table':  (size) => <EntityRelationTablePreview size={size} />,
+function AwsLambdaVisual({ size, canvasWidth, canvasHeight }: { size: 'sm' | 'md'; canvasWidth?: number; canvasHeight?: number }) {
+  let px: number;
+  if (canvasWidth && canvasHeight) {
+    px = Math.min(canvasWidth, canvasHeight) * 0.72;
+  } else {
+    px = size === 'sm' ? 28 : 40;
+  }
+  return (
+    <div aria-hidden="true" className="rounded overflow-hidden flex items-center justify-center" style={{ width: px, height: px }}>
+      <AwsLambda size={px} />
+    </div>
+  );
+}
+
+const COMPLEX_VISUALS: Record<string, (size: 'sm' | 'md', canvasWidth?: number, canvasHeight?: number) => React.ReactNode> = {
+  'server-rack':           (size) => <ServerRackVisual size={size} />,
+  'cylinder-icon':         (size) => <CylinderIconVisual size={size} />,
+  'entity-relation-table': (size) => <EntityRelationTablePreview size={size} />,
+  'aws-lambda':            (size, cw, ch) => <AwsLambdaVisual size={size} canvasWidth={cw} canvasHeight={ch} />,
 };
 
 // ─── Fallback for unknown kinds ───────────────────────────────────────────────
@@ -89,7 +161,7 @@ function UnknownBlock({ size }: { size: 'sm' | 'md' }) {
   );
 }
 
-// ─── SVG Icon ─────────────────────────────────────────────────────────────────
+// ─── SVG Icon (legacy Heroicons path fallback) ────────────────────────────────
 
 function SvgIcon({
   paths,
@@ -120,9 +192,10 @@ function SvgIcon({
 
 // ─── Main Renderer ────────────────────────────────────────────────────────────
 
-export function BlockRenderer({ kind, label, size = 'md', onRenameLabel }: BlockRendererProps) {
+export function BlockRenderer({ kind, label, size = 'md', canvasWidth, canvasHeight, onRenameLabel }: BlockRendererProps) {
   const def = getBlockDef(kind);
   const textSize = size === 'sm' ? 'text-[10px]' : 'text-xs';
+  const isCanvas = canvasWidth !== undefined && canvasHeight !== undefined;
 
   if (!def) {
     return (
@@ -148,28 +221,57 @@ export function BlockRenderer({ kind, label, size = 'md', onRenameLabel }: Block
     </span>
   );
 
-  // Complex visual (CSS-constructed) — bypass shape container
+  // Complex visual (CSS-constructed or full AWS SVG) — bypass shape container
   const complexRenderer = visual.complexVisualKey ? COMPLEX_VISUALS[visual.complexVisualKey] : undefined;
   if (complexRenderer) {
-    const complexVisual = complexRenderer(size);
     return (
       <div className="flex flex-col items-center gap-1.5">
-        {complexVisual}
+        {complexRenderer(size, canvasWidth, canvasHeight)}
         {labelEl}
       </div>
     );
   }
 
-  // Standard visual — SVG icon inside a shape container
-  const icon =
-    visual.svgPaths.length > 0 ? (
+  // AWS icons: render without a shape container — they carry their own colored background
+  if (visual.iconLibrary === 'aws' && visual.iconComponent) {
+    const awsRenderer = AWS_ICON_MAP[visual.iconComponent];
+    if (awsRenderer) {
+      const iconPx = isCanvas
+        ? Math.min(canvasWidth!, canvasHeight!) * 0.72
+        : size === 'sm' ? 28 : 40;
+      return (
+        <div className="flex flex-col items-center gap-1.5">
+          <span aria-hidden="true" className="rounded overflow-hidden flex items-center justify-center">
+            {awsRenderer(iconPx)}
+          </span>
+          {labelEl}
+        </div>
+      );
+    }
+  }
+
+  // Lucide icon inside a shape container
+  const iconPx = isCanvas
+    ? Math.round(Math.min(canvasWidth!, canvasHeight!) * 0.38)
+    : size === 'sm' ? 14 : 18;
+
+  let icon: React.ReactNode = null;
+
+  if (visual.iconLibrary === 'lucide' && visual.iconComponent) {
+    const LucideIcon = LUCIDE_ICON_MAP[visual.iconComponent];
+    if (LucideIcon) {
+      icon = <LucideIcon size={iconPx} className={visual.iconColorClass} strokeWidth={1.5} />;
+    }
+  } else if (visual.svgPaths.length > 0) {
+    icon = (
       <SvgIcon
         paths={visual.svgPaths}
         colorClass={visual.iconColorClass}
         fillRule={visual.svgFillRule}
         size={size}
       />
-    ) : null;
+    );
+  }
 
   return (
     <div className="flex flex-col items-center gap-1.5">
@@ -178,6 +280,8 @@ export function BlockRenderer({ kind, label, size = 'md', onRenameLabel }: Block
         size={size}
         bgClass={visual.bgClass}
         borderClass={visual.borderClass}
+        canvasWidth={isCanvas ? canvasWidth : undefined}
+        canvasHeight={isCanvas ? canvasHeight : undefined}
       >
         {icon}
       </IconShapeContainer>

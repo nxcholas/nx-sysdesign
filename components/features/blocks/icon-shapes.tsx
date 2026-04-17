@@ -13,16 +13,29 @@ interface ShapeProps {
   bgClass: string;
   borderClass: string;
   children: React.ReactNode;
+  /** When set (canvas mode), shape fills these pixel dimensions instead of fixed sm/md tokens. */
+  canvasWidth?: number;
+  canvasHeight?: number;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Returns inline style dimensions when in canvas mode, or undefined for palette mode. */
+function canvasDims(cw: number | undefined, ch: number | undefined, scaleX = 1, scaleY = 1) {
+  if (cw === undefined || ch === undefined) return undefined;
+  return { width: Math.round(cw * scaleX), height: Math.round(ch * scaleY) };
 }
 
 // ─── Circle ───────────────────────────────────────────────────────────────────
 
-function CircleShape({ size, bgClass, borderClass, children }: ShapeProps) {
-  const dim = size === 'sm' ? 'w-7 h-7' : 'w-10 h-10';
+function CircleShape({ size, bgClass, borderClass, children, canvasWidth, canvasHeight }: ShapeProps) {
+  const dims = canvasDims(canvasWidth, canvasHeight, 0.72, 0.72);
+  const paletteClass = size === 'sm' ? 'w-7 h-7' : 'w-10 h-10';
   return (
     <div
       aria-hidden="true"
-      className={`${dim} rounded-full border ${bgClass} ${borderClass} flex items-center justify-center`}
+      className={`rounded-full border ${bgClass} ${borderClass} flex items-center justify-center ${dims ? '' : paletteClass}`}
+      style={dims}
     >
       {children}
     </div>
@@ -31,12 +44,14 @@ function CircleShape({ size, bgClass, borderClass, children }: ShapeProps) {
 
 // ─── Rect ─────────────────────────────────────────────────────────────────────
 
-function RectShape({ size, bgClass, borderClass, children }: ShapeProps) {
-  const dim = size === 'sm' ? 'w-8 h-6' : 'w-12 h-9';
+function RectShape({ size, bgClass, borderClass, children, canvasWidth, canvasHeight }: ShapeProps) {
+  const dims = canvasDims(canvasWidth, canvasHeight, 0.82, 0.65);
+  const paletteClass = size === 'sm' ? 'w-8 h-6' : 'w-12 h-9';
   return (
     <div
       aria-hidden="true"
-      className={`${dim} rounded border ${bgClass} ${borderClass} flex items-center justify-center`}
+      className={`rounded border ${bgClass} ${borderClass} flex items-center justify-center ${dims ? '' : paletteClass}`}
+      style={dims}
     >
       {children}
     </div>
@@ -45,13 +60,15 @@ function RectShape({ size, bgClass, borderClass, children }: ShapeProps) {
 
 // ─── Cylinder — CSS-constructed, no children SVG ─────────────────────────────
 
-function CylinderShape({ size, bgClass, borderClass, children }: ShapeProps) {
-  const containerDim = size === 'sm' ? 'w-8 h-8' : 'w-11 h-11';
+function CylinderShape({ size, bgClass, borderClass, children, canvasWidth, canvasHeight }: ShapeProps) {
+  const dims = canvasDims(canvasWidth, canvasHeight, 0.72, 0.72);
+  const paletteClass = size === 'sm' ? 'w-8 h-8' : 'w-11 h-11';
   const ellipseDim = 'w-full h-2';
   return (
     <div
       aria-hidden="true"
-      className={`${containerDim} relative flex flex-col items-center`}
+      className={`relative flex flex-col items-center ${dims ? '' : paletteClass}`}
+      style={dims}
     >
       {/* Top ellipse */}
       <div className={`${ellipseDim} rounded-full border ${bgClass} ${borderClass}`} />
@@ -69,13 +86,14 @@ function CylinderShape({ size, bgClass, borderClass, children }: ShapeProps) {
 
 // ─── Hexagon ──────────────────────────────────────────────────────────────────
 
-function HexagonShape({ size, bgClass, borderClass, children }: ShapeProps) {
-  const dim = size === 'sm' ? 'w-8 h-7' : 'w-12 h-10';
+function HexagonShape({ size, bgClass, borderClass, children, canvasWidth, canvasHeight }: ShapeProps) {
+  const dims = canvasDims(canvasWidth, canvasHeight, 0.76, 0.65);
+  const paletteClass = size === 'sm' ? 'w-8 h-7' : 'w-12 h-10';
   return (
     <div
       aria-hidden="true"
-      className={`${dim} border ${bgClass} ${borderClass} flex items-center justify-center`}
-      style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }}
+      className={`border ${bgClass} ${borderClass} flex items-center justify-center ${dims ? '' : paletteClass}`}
+      style={{ ...dims, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }}
     >
       {children}
     </div>
@@ -84,12 +102,14 @@ function HexagonShape({ size, bgClass, borderClass, children }: ShapeProps) {
 
 // ─── Diamond ──────────────────────────────────────────────────────────────────
 
-function DiamondShape({ size, bgClass, borderClass, children }: ShapeProps) {
-  const dim = size === 'sm' ? 'w-7 h-7' : 'w-10 h-10';
+function DiamondShape({ size, bgClass, borderClass, children, canvasWidth, canvasHeight }: ShapeProps) {
+  const dims = canvasDims(canvasWidth, canvasHeight, 0.65, 0.65);
+  const paletteClass = size === 'sm' ? 'w-7 h-7' : 'w-10 h-10';
   return (
     <div
       aria-hidden="true"
-      className={`${dim} border ${bgClass} ${borderClass} flex items-center justify-center rotate-45`}
+      className={`border ${bgClass} ${borderClass} flex items-center justify-center rotate-45 ${dims ? '' : paletteClass}`}
+      style={dims}
     >
       <div className="-rotate-45 flex items-center justify-center">
         {children}
@@ -100,13 +120,14 @@ function DiamondShape({ size, bgClass, borderClass, children }: ShapeProps) {
 
 // ─── Shield ───────────────────────────────────────────────────────────────────
 
-function ShieldShape({ size, bgClass, borderClass, children }: ShapeProps) {
-  const dim = size === 'sm' ? 'w-7 h-8' : 'w-10 h-11';
+function ShieldShape({ size, bgClass, borderClass, children, canvasWidth, canvasHeight }: ShapeProps) {
+  const dims = canvasDims(canvasWidth, canvasHeight, 0.65, 0.72);
+  const paletteClass = size === 'sm' ? 'w-7 h-8' : 'w-10 h-11';
   return (
     <div
       aria-hidden="true"
-      className={`${dim} border ${bgClass} ${borderClass} flex items-center justify-center`}
-      style={{ clipPath: 'polygon(50% 0%, 100% 20%, 100% 60%, 50% 100%, 0% 60%, 0% 20%)' }}
+      className={`border ${bgClass} ${borderClass} flex items-center justify-center ${dims ? '' : paletteClass}`}
+      style={{ ...dims, clipPath: 'polygon(50% 0%, 100% 20%, 100% 60%, 50% 100%, 0% 60%, 0% 20%)' }}
     >
       {children}
     </div>
@@ -115,14 +136,15 @@ function ShieldShape({ size, bgClass, borderClass, children }: ShapeProps) {
 
 // ─── Cloud ────────────────────────────────────────────────────────────────────
 
-function CloudShape({ size, bgClass, borderClass, children }: ShapeProps) {
-  const dim = size === 'sm' ? 'w-9 h-6' : 'w-13 h-9';
-  // Cloud shape via border-radius trick
+function CloudShape({ size, bgClass, borderClass, children, canvasWidth, canvasHeight }: ShapeProps) {
+  const dims = canvasDims(canvasWidth, canvasHeight, 0.82, 0.58);
+  const paletteClass = size === 'sm' ? 'w-9 h-6' : 'w-13 h-9';
   return (
     <div
       aria-hidden="true"
-      className={`relative ${dim} ${bgClass} flex items-center justify-center overflow-hidden`}
+      className={`relative ${bgClass} flex items-center justify-center overflow-hidden ${dims ? '' : paletteClass}`}
       style={{
+        ...dims,
         borderRadius: '40% 40% 30% 30% / 50% 50% 40% 40%',
         boxShadow: `0 0 0 1px var(--tw-border-opacity, 1)`,
       }}
@@ -137,13 +159,14 @@ function CloudShape({ size, bgClass, borderClass, children }: ShapeProps) {
 
 // ─── Parallelogram ────────────────────────────────────────────────────────────
 
-function ParallelogramShape({ size, bgClass, borderClass, children }: ShapeProps) {
-  const dim = size === 'sm' ? 'w-9 h-6' : 'w-13 h-9';
+function ParallelogramShape({ size, bgClass, borderClass, children, canvasWidth, canvasHeight }: ShapeProps) {
+  const dims = canvasDims(canvasWidth, canvasHeight, 0.82, 0.58);
+  const paletteClass = size === 'sm' ? 'w-9 h-6' : 'w-13 h-9';
   return (
     <div
       aria-hidden="true"
-      className={`${dim} border ${bgClass} ${borderClass} flex items-center justify-center`}
-      style={{ transform: 'skewX(-12deg)' }}
+      className={`border ${bgClass} ${borderClass} flex items-center justify-center ${dims ? '' : paletteClass}`}
+      style={{ ...dims, transform: 'skewX(-12deg)' }}
     >
       <div style={{ transform: 'skewX(12deg)' }} className="flex items-center justify-center">
         {children}
@@ -160,8 +183,10 @@ export function IconShapeContainer({
   bgClass,
   borderClass,
   children,
+  canvasWidth,
+  canvasHeight,
 }: ShapeProps & { shape: IconShape }) {
-  const props = { size, bgClass, borderClass, children };
+  const props = { size, bgClass, borderClass, children, canvasWidth, canvasHeight };
 
   switch (shape) {
     case 'circle':        return <CircleShape {...props} />;

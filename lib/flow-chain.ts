@@ -1,5 +1,5 @@
 import type { Connection, PaletteItemKind } from './types';
-import { getComponentRole, getSmartRoutePoints } from './connection-utils';
+import { getSmartRoutePoints } from './connection-utils';
 
 /** Consistent animation speed in screen-space pixels per second. */
 export const FLOW_SPEED = 150;
@@ -80,7 +80,7 @@ export function buildFlowChains(
     groups.push(group);
   }
 
-  // For each connected component, find root and trace paths
+  // For each connected component, find ALL roots and trace paths from each
   const chains: FlowChain[] = [];
 
   for (const group of groups) {
@@ -89,53 +89,38 @@ export function buildFlowChains(
       c => groupSet.has(c.sourceId) && groupSet.has(c.targetId)
     );
 
-    const root = findRoot(group, groupConnections, entityMap);
-    if (!root) continue;
+    const roots = findRoots(group, groupConnections);
 
-    // DFS from root following directed edges
-    tracePaths(root, outgoing, entityMap, chains);
+    if (roots.length === 0) {
+      // Fully cyclic — fall back to a single arbitrary start
+      const fallback = group[0];
+      if (fallback) tracePaths(fallback, outgoing, entityMap, chains);
+      continue;
+    }
+
+    // DFS from every root so every source node gets its own bubble
+    for (const root of roots) {
+      tracePaths(root, outgoing, entityMap, chains);
+    }
   }
 
   return chains;
 }
 
 /**
- * Finds the root node of a connected component.
- * Prefers an entity with in-degree 0 (no incoming connections).
+ * Finds all root nodes of a connected component — nodes with in-degree 0.
+ * Returns an empty array if the component is fully cyclic.
  */
-function findRoot(
+function findRoots(
   group: string[],
   groupConnections: Connection[],
-  entityMap: Map<string, FlowEntity>,
-): string | null {
-  // Compute in-degree within this group
+): string[] {
   const inDegree = new Map<string, number>();
   for (const id of group) inDegree.set(id, 0);
   for (const conn of groupConnections) {
     inDegree.set(conn.targetId, (inDegree.get(conn.targetId) || 0) + 1);
   }
-
-  // Prefer entity with in-degree 0
-  for (const id of group) {
-    const comp = entityMap.get(id);
-    if (comp && (!comp.kind || getComponentRole(comp.kind) === 'entity') && inDegree.get(id) === 0) {
-      return id;
-    }
-  }
-
-  // Fallback: any node with in-degree 0
-  for (const id of group) {
-    if (inDegree.get(id) === 0) return id;
-  }
-
-  // Fallback: first entity in any connection
-  for (const conn of groupConnections) {
-    const source = entityMap.get(conn.sourceId);
-    if (source && (!source.kind || getComponentRole(source.kind) === 'entity')) return conn.sourceId;
-  }
-
-  // Last resort
-  return group[0] ?? null;
+  return group.filter((id) => inDegree.get(id) === 0);
 }
 
 /**
@@ -215,14 +200,26 @@ export function composeFlowPath(
     if (i === 0) {
       allPoints.push(...routePoints);
     } else {
-      // Internal traversal: previous segment ended at target port,
-      // this segment starts at source port (different port on same component).
-      // Add source port if it differs from last point, then rest of route.
-      const first = routePoints[0];
-      const last = allPoints[allPoints.length - 1];
-      if (first && last && (first.x !== last.x || first.y !== last.y)) {
-        allPoints.push(first);
+      // Insert orthogonal waypoints through the intermediate component's center
+      // to avoid a diagonal cut between the arrival port and departure port.
+      // Path: lastPt → (center.x, lastPt.y) → (center.x, firstPt.y) → firstPt
+      const intermediateEntity = segments[i - 1]!.target;
+      const centerScreen = toScreen({
+        x: intermediateEntity.x + intermediateEntity.width / 2,
+        y: intermediateEntity.y + intermediateEntity.height / 2,
+      });
+
+      const lastPt = allPoints[allPoints.length - 1]!;
+      const firstPt = routePoints[0];
+
+      if (firstPt) {
+        const wp1 = { x: centerScreen.x, y: lastPt.y };
+        const wp2 = { x: centerScreen.x, y: firstPt.y };
+        if (wp1.x !== lastPt.x || wp1.y !== lastPt.y) allPoints.push(wp1);
+        if (wp2.x !== wp1.x || wp2.y !== wp1.y) allPoints.push(wp2);
+        if (wp2.x !== firstPt.x || wp2.y !== firstPt.y) allPoints.push(firstPt);
       }
+
       allPoints.push(...routePoints.slice(1));
     }
   }

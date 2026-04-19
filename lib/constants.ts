@@ -3,6 +3,8 @@ import type {
   StatusCodeGroup,
   StatusCode,
   PaletteSection,
+  ShapeStyle,
+  TextStyle,
 } from './types';
 import { getAllCategories } from './block-registry';
 
@@ -86,6 +88,40 @@ export const STATUS_CODES: StatusCode[] = [
   { code: 503, label: 'Service Unavailable',  group: '5xx' },
   { code: 504, label: 'Gateway Timeout',      group: '5xx' },
 ];
+
+// --- Text Block ---
+export const TEXT_BLOCK_DEFAULT_WIDTH = 200;
+export const TEXT_BLOCK_DEFAULT_HEIGHT = 72;
+
+// --- Shape ---
+export const SHAPE_MIN_WIDTH = 40;
+export const SHAPE_MIN_HEIGHT = 40;
+
+export const DEFAULT_SHAPE_STYLE: ShapeStyle = {
+  fill: 'transparent',
+  stroke: '#9ca3af',
+  strokeWidth: 2,
+};
+
+export const DEFAULT_TEXT_STYLE: TextStyle = {
+  fontSize: 32,
+  bold: false,
+  italic: false,
+  underline: false,
+  strikethrough: false,
+  color: '#e5e7eb',
+  align: 'center',
+};
+
+export const DEFAULT_SHAPE_TEXT_STYLE: TextStyle = {
+  fontSize: 32,
+  bold: false,
+  italic: false,
+  underline: false,
+  strikethrough: false,
+  color: '#e5e7eb',
+  align: 'center',
+};
 
 // --- Badge Dimensions (HTTP methods + status codes) ---
 export const BADGE_DIMENSIONS = { width: 96, height: 40 };

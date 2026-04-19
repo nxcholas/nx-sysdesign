@@ -5,6 +5,7 @@ import type { Frame, CanvasTransform, PortSide, EdgePortSide } from '@/lib/types
 import type { ConnectionDragState } from '@/hooks/use-connection-drag';
 import { snapToGrid } from '@/lib/canvas-utils';
 import { GRID_SIZE } from '@/lib/constants';
+import { isPointInsideFrame } from '@/lib/frame-utils';
 import { FrameLabel } from './frame-label';
 import { DeleteButton } from './delete-button';
 import { ConnectionPort } from './connection-port';
@@ -15,11 +16,13 @@ interface FrameComponentProps {
   isSelected: boolean;
   isHighlighted?: boolean;
   transform: CanvasTransform;
+  allFrames: Frame[];
   onSelect: (id: string) => void;
   onMove: (id: string, x: number, y: number) => void;
   onRemove: (id: string) => void;
   onRename: (id: string, label: string) => void;
   onResize: (id: string, width: number, height: number, x: number, y: number) => void;
+  onSetFrameParent: (frameId: string, parentFrameId: string | null) => void;
   onConnectionDragStart: (entityId: string, port: PortSide, e: React.PointerEvent) => void;
   onConnectionDragEnd: (entityId: string, port: PortSide) => void;
   connectionDragState: ConnectionDragState;
@@ -33,11 +36,13 @@ export function FrameComponent({
   isSelected,
   isHighlighted,
   transform,
+  allFrames,
   onSelect,
   onMove,
   onRemove,
   onRename,
   onResize,
+  onSetFrameParent,
   onConnectionDragStart,
   onConnectionDragEnd,
   connectionDragState,
@@ -56,7 +61,10 @@ export function FrameComponent({
     (e: React.PointerEvent) => {
       if (e.button !== 0) return;
       e.stopPropagation();
-      onSelect(frame.id);
+      // Nested frames (parentFrameId set) require double-click to select — single click is handled by parent
+      if (!frame.parentFrameId) {
+        onSelect(frame.id);
+      }
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       dragRef.current = {
         active: true,
@@ -67,7 +75,15 @@ export function FrameComponent({
         didMove: false,
       };
     },
-    [frame.id, frame.x, frame.y, onSelect],
+    [frame.id, frame.x, frame.y, frame.parentFrameId, onSelect],
+  );
+
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onSelect(frame.id);
+    },
+    [frame.id, onSelect],
   );
 
   const handlePointerMove = useCallback(
@@ -88,10 +104,30 @@ export function FrameComponent({
   const handlePointerUp = useCallback(
     (e: React.PointerEvent) => {
       if (!dragRef.current.active) return;
+      const didMove = dragRef.current.didMove;
       dragRef.current.active = false;
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+
+      if (didMove) {
+        // Detect frame-in-frame: check if this frame's center is inside any other frame
+        const center = {
+          x: frame.x + frame.width / 2,
+          y: frame.y + frame.height / 2,
+        };
+        const candidates = allFrames.filter((f) => f.id !== frame.id);
+        // Pick the deepest (highest zIndex) candidate containing the center
+        const host = candidates
+          .filter((f) => isPointInsideFrame(center, f))
+          .sort((a, b) => b.zIndex - a.zIndex)[0] ?? null;
+
+        const currentParentId = frame.parentFrameId ?? null;
+        const newParentId = host?.id ?? null;
+        if (newParentId !== currentParentId) {
+          onSetFrameParent(frame.id, newParentId);
+        }
+      }
     },
-    [],
+    [frame.id, frame.x, frame.y, frame.width, frame.height, frame.parentFrameId, allFrames, onSetFrameParent],
   );
 
   return (
@@ -107,6 +143,7 @@ export function FrameComponent({
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onDoubleClick={handleDoubleClick}
       className={`group rounded-lg border-2 border-dashed cursor-grab active:cursor-grabbing
         ${isHighlighted ? 'border-blue-400 bg-blue-500/10' : isSelected ? 'border-blue-500' : 'border-gray-600 hover:border-gray-500'}`}
     >

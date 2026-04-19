@@ -11,6 +11,7 @@ interface ResizeHandlesProps {
   component: PlacedComponent;
   transform: CanvasTransform;
   onResize: (id: string, width: number, height: number) => void;
+  onResizeWithMove?: (id: string, x: number, y: number, width: number, height: number) => void;
 }
 
 const CORNERS: Corner[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
@@ -36,13 +37,15 @@ function getCornerStyle(corner: Corner, size: number): React.CSSProperties {
   }
 }
 
-export function ResizeHandles({ component, transform, onResize }: ResizeHandlesProps) {
+export function ResizeHandles({ component, transform, onResize, onResizeWithMove }: ResizeHandlesProps) {
   const dragRef = useRef<{
     corner: Corner;
     startX: number;
     startY: number;
     startWidth: number;
     startHeight: number;
+    startCompX: number;
+    startCompY: number;
   } | null>(null);
 
   const def = component.kind.type === 'block' ? getBlockDef(component.kind.kind) : null;
@@ -62,20 +65,24 @@ export function ResizeHandles({ component, transform, onResize }: ResizeHandlesP
         startY: e.clientY,
         startWidth: component.width,
         startHeight: component.height,
+        startCompX: component.x,
+        startCompY: component.y,
       };
     },
-    [component.width, component.height]
+    [component.width, component.height, component.x, component.y]
   );
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!dragRef.current) return;
-      const { corner, startX, startY, startWidth, startHeight } = dragRef.current;
+      const { corner, startX, startY, startWidth, startHeight, startCompX, startCompY } = dragRef.current;
       const dx = (e.clientX - startX) / transform.scale;
       const dy = (e.clientY - startY) / transform.scale;
 
       let newWidth = startWidth;
       let newHeight = startHeight;
+      let newX = startCompX;
+      let newY = startCompY;
 
       switch (corner) {
         case 'bottom-right':
@@ -85,23 +92,33 @@ export function ResizeHandles({ component, transform, onResize }: ResizeHandlesP
         case 'bottom-left':
           newWidth = startWidth - dx;
           newHeight = startHeight + dy;
+          newX = startCompX + dx;
           break;
         case 'top-right':
           newWidth = startWidth + dx;
           newHeight = startHeight - dy;
+          newY = startCompY + dy;
           break;
         case 'top-left':
           newWidth = startWidth - dx;
           newHeight = startHeight - dy;
+          newX = startCompX + dx;
+          newY = startCompY + dy;
           break;
       }
 
-      newWidth = Math.max(snapToGrid(newWidth), minWidth);
-      newHeight = Math.max(snapToGrid(newHeight), minHeight);
+      const snappedWidth = Math.max(snapToGrid(newWidth), minWidth);
+      const snappedHeight = Math.max(snapToGrid(newHeight), minHeight);
 
-      onResize(component.id, newWidth, newHeight);
+      if (onResizeWithMove && corner !== 'bottom-right') {
+        const snappedX = snapToGrid(newX);
+        const snappedY = snapToGrid(newY);
+        onResizeWithMove(component.id, snappedX, snappedY, snappedWidth, snappedHeight);
+      } else {
+        onResize(component.id, snappedWidth, snappedHeight);
+      }
     },
-    [component.id, transform.scale, onResize, minWidth, minHeight]
+    [component.id, transform.scale, onResize, onResizeWithMove, minWidth, minHeight]
   );
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {

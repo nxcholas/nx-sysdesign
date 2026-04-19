@@ -6,6 +6,8 @@ import { useDragDrop } from '@/hooks/use-drag-drop';
 import { useConnectionDrag } from '@/hooks/use-connection-drag';
 import { useMarqueeSelect } from '@/hooks/use-marquee-select';
 import { useFrameDraw } from '@/hooks/use-frame-draw';
+import { useTextBlockPlace } from '@/hooks/use-text-block-place';
+import { useShapeDraw } from '@/hooks/use-shape-draw';
 import { BADGE_DIMENSIONS, GRID_SIZE } from '@/lib/constants';
 import { getBlockDef } from '@/lib/block-registry';
 import type {
@@ -16,6 +18,9 @@ import type {
   Frame,
   CanvasTransform,
   Cardinality,
+  ShapeKind,
+  TextStyle,
+  ShapeStyle,
 } from '@/lib/types';
 import { isPointInsideFrame } from '@/lib/frame-utils';
 import { getSmartRoutePoints, pointsToPath, oppositePort, truncatePolyline, PORT_HIT_RADIUS, isRowPort } from '@/lib/connection-utils';
@@ -24,7 +29,10 @@ import { buildFlowChains, composeFlowPath, FLOW_SPEED } from '@/lib/flow-chain';
 import { CanvasViewport } from './canvas-viewport';
 import { CanvasDropZone } from './canvas-drop-zone';
 import { CanvasToolbar } from './canvas-toolbar';
+import { ShapeGeometry } from './shape-renderer';
 import { ConnectionInspector } from '@/components/features/inspector/connection-inspector';
+import { TextBlockInspector } from '@/components/features/inspector/text-block-inspector';
+import { ShapeInspector } from '@/components/features/inspector/shape-inspector';
 
 /** Serialize a PortSide to a stable string key for the highlightedPorts set. */
 function portKey(componentId: string, port: PortSide): string {
@@ -53,7 +61,7 @@ export interface CanvasRootProps {
   transform: CanvasTransform;
   canvasRef: React.RefObject<HTMLDivElement | null>;
   // Callbacks — component
-  addComponent: (kind: PaletteItemKind, x: number, y: number, width: number, height: number, frameId?: string) => void;
+  addComponent: (kind: PaletteItemKind, x: number, y: number, width: number, height: number, frameId?: string, extras?: Partial<Pick<PlacedComponent, 'text' | 'textStyle' | 'shapeStyle'>>) => void;
   moveComponent: (id: string, x: number, y: number) => void;
   removeComponent: (id: string) => void;
   selectComponent: (id: string | null) => void;
@@ -74,6 +82,7 @@ export interface CanvasRootProps {
   renameComponent: (id: string, label: string) => void;
   resizeFrame: (id: string, width: number, height: number, x: number, y: number) => void;
   setComponentFrame: (componentId: string, frameId: string | null) => void;
+  setFrameParent: (frameId: string, parentFrameId: string | null) => void;
   // Pan/zoom handlers (owned by page.tsx via useCanvas)
   didPanRef: React.RefObject<boolean>;
   spaceHeldRef: React.RefObject<boolean>;
@@ -89,6 +98,10 @@ export interface CanvasRootProps {
   renameTableRow: (id: string, rowId: string, name: string) => void;
   cycleTableKey: (id: string, rowId: string) => void;
   updateConnectionCardinality: (id: string, cardinality: Cardinality) => void;
+  updateText: (id: string, text: string) => void;
+  updateTextStyle: (id: string, style: Partial<TextStyle>) => void;
+  updateShapeStyle: (id: string, style: Partial<ShapeStyle>) => void;
+  updateShapeKind: (id: string, shape: ShapeKind) => void;
   // Diagram persistence callback
   onStateChange: () => void;
 }
@@ -121,12 +134,17 @@ export function CanvasRoot(props: CanvasRootProps) {
     renameComponent,
     resizeFrame,
     setComponentFrame,
+    setFrameParent,
     updateTableHeader,
     addTableRow,
     removeTableRow,
     renameTableRow,
     cycleTableKey,
     updateConnectionCardinality,
+    updateText,
+    updateTextStyle,
+    updateShapeStyle,
+    updateShapeKind,
     didPanRef,
     spaceHeldRef,
     ctrlHeldRef,
@@ -139,6 +157,9 @@ export function CanvasRoot(props: CanvasRootProps) {
 
   // useCanvasTool is purely local UI state — kept internal
   const { activeTool, setActiveTool } = useCanvasTool();
+
+  const [activeShape, setActiveShape] = useState<ShapeKind | null>(null);
+  const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
 
   const { handleDragOver, handleDrop } = useDragDrop();
 
@@ -172,6 +193,41 @@ export function CanvasRoot(props: CanvasRootProps) {
     handleFramePointerMove,
     handleFramePointerUp,
   } = useFrameDraw(canvasRef, transform, placedComponents, addFrame, setActiveTool);
+
+  const { handleTextBlockPointerDown } = useTextBlockPlace(
+    canvasRef,
+    transform,
+    placedComponents,
+    (kind, x, y, w, h, frameId, extras) => addComponent(kind, x, y, w, h, frameId, extras),
+    setActiveTool,
+    (id) => {
+      // '__latest__' sentinel: we need to find the newly added component by comparing
+      // before/after — canvas-root will set autoFocusId to the last placedComponent id
+      // after the state update via a useEffect.
+      if (id === '__latest__') setAutoFocusId('__latest__');
+    },
+  );
+
+
+  const {
+    shapeDrawRect,
+    handleShapePointerDown,
+    handleShapePointerMove,
+    handleShapePointerUp,
+  } = useShapeDraw(canvasRef, transform, activeShape, addComponent, setActiveTool);
+
+  // After a text block is placed, resolve '__latest__' to the actual new component id
+  useEffect(() => {
+    if (autoFocusId === '__latest__' && placedComponents.length > 0) {
+      const last = placedComponents[placedComponents.length - 1];
+      if (last && last.kind.type === 'text-block') {
+        setAutoFocusId(last.id);
+        // Clear after one render so it doesn't re-trigger
+        const timer = setTimeout(() => setAutoFocusId(null), 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [autoFocusId, placedComponents]);
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [highlightedFrameId, setHighlightedFrameId] = useState<string | null>(null);
@@ -270,12 +326,24 @@ export function CanvasRoot(props: CanvasRootProps) {
         return;
       }
 
+      // Text block: left-click in text-block mode
+      if (isLeftClick && activeTool === 'text-block') {
+        handleTextBlockPointerDown(e);
+        return;
+      }
+
+      // Shape draw: left-click in shape mode (only when a shape is selected)
+      if (isLeftClick && activeTool === 'shape' && activeShape) {
+        handleShapePointerDown(e);
+        return;
+      }
+
       // Selection: left-click in select mode on empty canvas
       if (isLeftClick && activeTool === 'select') {
         handleSelectionPointerDown(e);
       }
     },
-    [connectionActiveRef, activeTool, spaceHeldRef, ctrlHeldRef, handlePointerDown, handleFramePointerDown, handleSelectionPointerDown]
+    [connectionActiveRef, activeTool, activeShape, spaceHeldRef, ctrlHeldRef, handlePointerDown, handleFramePointerDown, handleTextBlockPointerDown, handleShapePointerDown, handleSelectionPointerDown]
   );
 
   const handleCanvasPointerMove = useCallback(
@@ -284,8 +352,9 @@ export function CanvasRoot(props: CanvasRootProps) {
       handlePointerMove(e);
       handleSelectionPointerMove(e);
       handleFramePointerMove(e);
+      handleShapePointerMove(e);
     },
-    [connectionActiveRef, handlePointerMove, handleSelectionPointerMove, handleFramePointerMove]
+    [connectionActiveRef, handlePointerMove, handleSelectionPointerMove, handleFramePointerMove, handleShapePointerMove]
   );
 
   const handleCanvasPointerUp = useCallback(
@@ -301,8 +370,9 @@ export function CanvasRoot(props: CanvasRootProps) {
       handlePointerUp(e);
       handleSelectionPointerUp(e);
       handleFramePointerUp(e);
+      handleShapePointerUp(e);
     },
-    [connectionActiveRef, handlePointerUp, handleSelectionPointerUp, handleFramePointerUp]
+    [connectionActiveRef, handlePointerUp, handleSelectionPointerUp, handleFramePointerUp, handleShapePointerUp]
   );
 
   const handleConnectionDragStart = useCallback(
@@ -338,11 +408,15 @@ export function CanvasRoot(props: CanvasRootProps) {
           ? 'crosshair'
           : activeTool === 'frame'
             ? 'crosshair'
-            : selectionRect
+            : activeTool === 'shape'
               ? 'crosshair'
-              : (activeTool === 'pan' || ctrlHeldRef.current)
-                ? 'grab'
-                : 'default',
+              : activeTool === 'text-block'
+                ? 'text'
+                : selectionRect
+                  ? 'crosshair'
+                  : (activeTool === 'pan' || ctrlHeldRef.current)
+                    ? 'grab'
+                    : 'default',
       }}
       onPointerDown={handleCanvasPointerDown}
       onPointerMove={handleCanvasPointerMove}
@@ -353,7 +427,7 @@ export function CanvasRoot(props: CanvasRootProps) {
       onDrop={onDrop}
       onClick={handleCanvasClick}
     >
-      {/* Connection inspector + delete button — shown when a connection is selected */}
+      {/* Connection inspector — shown when a connection is selected */}
       {selectedConnectionId && (() => {
         const conn = connections.find(c => c.id === selectedConnectionId);
         if (!conn) return null;
@@ -362,6 +436,34 @@ export function CanvasRoot(props: CanvasRootProps) {
             connection={conn}
             onUpdateCardinality={updateConnectionCardinality}
             onRemove={removeConnection}
+          />
+        );
+      })()}
+
+      {/* Shape inspector — shown when a shape component is selected */}
+      {selectedIds.length === 1 && (() => {
+        const comp = placedComponents.find(c => c.id === selectedIds[0]);
+        if (!comp || comp.kind.type !== 'shape') return null;
+        return (
+          <ShapeInspector
+            component={comp}
+            onUpdateStyle={(style) => updateShapeStyle(comp.id, style)}
+            onUpdateShape={(shape) => updateShapeKind(comp.id, shape)}
+            onUpdateTextStyle={(style) => updateTextStyle(comp.id, style)}
+            onRemove={() => removeComponent(comp.id)}
+          />
+        );
+      })()}
+
+      {/* Text block inspector — shown when a text block is selected */}
+      {selectedIds.length === 1 && (() => {
+        const comp = placedComponents.find(c => c.id === selectedIds[0]);
+        if (!comp || comp.kind.type !== 'text-block') return null;
+        return (
+          <TextBlockInspector
+            component={comp}
+            onUpdateTextStyle={(style) => updateTextStyle(comp.id, style)}
+            onRemove={() => removeComponent(comp.id)}
           />
         );
       })()}
@@ -422,6 +524,7 @@ export function CanvasRoot(props: CanvasRootProps) {
         onMove={moveComponent}
         onRemove={removeComponent}
         onResize={resizeComponent}
+        onResizeWithMove={(id, x, y, w, h) => { resizeComponent(id, w, h); moveComponent(id, x, y); }}
         onConnectionDragStart={handleConnectionDragStart}
         onConnectionDragEnd={handleConnectionDragEnd}
         connectionDragState={connectionDragState}
@@ -446,12 +549,15 @@ export function CanvasRoot(props: CanvasRootProps) {
         onRenameComponent={renameComponent}
         onResizeFrame={resizeFrame}
         onSetComponentFrame={setComponentFrame}
+        onSetFrameParent={setFrameParent}
         onHighlightFrame={setHighlightedFrameId}
         onUpdateTableHeader={updateTableHeader}
         onAddTableRow={addTableRow}
         onRemoveTableRow={removeTableRow}
         onRenameTableRow={renameTableRow}
         onCycleTableKey={cycleTableKey}
+        onTextChange={updateText}
+        autoFocusId={autoFocusId}
       />
 
       {/* Connections overlay — rendered AFTER viewport so hit areas are above frames/components */}
@@ -628,6 +734,36 @@ export function CanvasRoot(props: CanvasRootProps) {
         );
       })()}
 
+      {/* Shape draw preview */}
+      {shapeDrawRect && activeShape && (() => {
+        const { scale, translateX, translateY } = transform;
+        const sw = shapeDrawRect.width * scale;
+        const sh = shapeDrawRect.height * scale;
+        return (
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left: shapeDrawRect.x * scale + translateX,
+              top: shapeDrawRect.y * scale + translateY,
+              width: sw,
+              height: sh,
+              zIndex: 5,
+            }}
+          >
+            <svg width={sw} height={sh} viewBox={`0 0 ${sw} ${sh}`} style={{ overflow: 'visible' }}>
+              <ShapeGeometry
+                kind={activeShape}
+                width={sw}
+                height={sh}
+                fill="transparent"
+                stroke="rgba(156,163,175,0.7)"
+                strokeWidth={1.5}
+              />
+            </svg>
+          </div>
+        );
+      })()}
+
       {/* Frame draw preview */}
       {frameDrawRect && (() => {
         const { scale, translateX, translateY } = transform;
@@ -646,7 +782,11 @@ export function CanvasRoot(props: CanvasRootProps) {
       })()}
 
       {/* Canvas toolbar */}
-      <CanvasToolbar activeTool={activeTool} onToolChange={setActiveTool} />
+      <CanvasToolbar
+        activeTool={activeTool}
+        onToolChange={setActiveTool}
+        onShapeSelect={setActiveShape}
+      />
 
       {/* Empty state hint */}
       {placedComponents.length === 0 && (

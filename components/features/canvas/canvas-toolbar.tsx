@@ -1,11 +1,14 @@
 'use client';
 
-import type { CanvasTool } from '@/lib/types';
+import { useState } from 'react';
+import type { CanvasTool, ShapeKind } from '@/lib/types';
 import { Tooltip } from '@/components/ui/tooltip';
+import { ShapePickerPopover } from './shape-picker-popover';
 
 interface CanvasToolbarProps {
   activeTool: CanvasTool;
   onToolChange: (tool: CanvasTool) => void;
+  onShapeSelect: (shape: ShapeKind) => void;
 }
 
 function CursorIcon() {
@@ -37,11 +40,44 @@ function FrameIcon() {
   );
 }
 
-export function CanvasToolbar({ activeTool, onToolChange }: CanvasToolbarProps) {
+function TextBlockIcon() {
+  return (
+    <svg width={16} height={16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <line x1="2" y1="4" x2="14" y2="4" />
+      <line x1="8" y1="4" x2="8" y2="13" />
+    </svg>
+  );
+}
+
+function ShapeIcon() {
+  return (
+    <svg width={16} height={16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="8,2 14,14 2,14" />
+    </svg>
+  );
+}
+
+export function CanvasToolbar({ activeTool, onToolChange, onShapeSelect }: CanvasToolbarProps) {
+  const [shapePopoverOpen, setShapePopoverOpen] = useState(false);
+
   const btnBase =
     'flex items-center justify-center w-8 h-8 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500';
   const btnActive = 'bg-blue-600/20 text-blue-400';
   const btnInactive = 'text-gray-400 hover:text-gray-200 hover:bg-panel-hover';
+
+  const handleShapeButtonClick = () => {
+    if (activeTool === 'shape') {
+      setShapePopoverOpen((prev) => !prev);
+    } else {
+      setShapePopoverOpen(true);
+    }
+  };
+
+  const handleShapeSelect = (shape: ShapeKind) => {
+    onShapeSelect(shape);
+    onToolChange('shape');
+    setShapePopoverOpen(false);
+  };
 
   return (
     <div
@@ -61,7 +97,7 @@ export function CanvasToolbar({ activeTool, onToolChange }: CanvasToolbarProps) 
 
       <div className="w-px h-5 bg-panel-border" />
 
-            <Tooltip content={<>Frame <kbd className="ml-1 px-1 rounded bg-gray-700 text-[10px] font-mono">F</kbd></>}>
+      <Tooltip content={<>Frame <kbd className="ml-1 px-1 rounded bg-gray-700 text-[10px] font-mono">F</kbd></>}>
         <button
           type="button"
           aria-label="Frame tool"
@@ -71,6 +107,37 @@ export function CanvasToolbar({ activeTool, onToolChange }: CanvasToolbarProps) 
           <FrameIcon />
         </button>
       </Tooltip>
+
+      <Tooltip content={<>Text Block <kbd className="ml-1 px-1 rounded bg-gray-700 text-[10px] font-mono">T</kbd></>}>
+        <button
+          type="button"
+          aria-label="Text block tool"
+          className={`${btnBase} ${activeTool === 'text-block' ? btnActive : btnInactive}`}
+          onClick={() => onToolChange('text-block')}
+        >
+          <TextBlockIcon />
+        </button>
+      </Tooltip>
+
+      <div className="relative">
+        <Tooltip content={<>Shape <kbd className="ml-1 px-1 rounded bg-gray-700 text-[10px] font-mono">U</kbd></>}>
+          <button
+            type="button"
+            aria-label="Shape tool"
+            className={`${btnBase} ${activeTool === 'shape' ? btnActive : btnInactive}`}
+            onClick={handleShapeButtonClick}
+          >
+            <ShapeIcon />
+          </button>
+        </Tooltip>
+
+        {shapePopoverOpen && (
+          <ShapePickerPopover
+            onSelect={handleShapeSelect}
+            onClose={() => setShapePopoverOpen(false)}
+          />
+        )}
+      </div>
 
       <Tooltip content={<>Pan <kbd className="ml-1 px-1 rounded bg-gray-700 text-[10px] font-mono">Ctrl</kbd> <kbd className="px-1 rounded bg-gray-700 text-[10px] font-mono">Middle Click</kbd></>}>
         <button
@@ -82,7 +149,6 @@ export function CanvasToolbar({ activeTool, onToolChange }: CanvasToolbarProps) 
           <HandIcon />
         </button>
       </Tooltip>
-
     </div>
   );
 }

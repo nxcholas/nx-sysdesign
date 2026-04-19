@@ -10,6 +10,9 @@ import type {
   Frame,
   DiagramSchema,
   Cardinality,
+  TextStyle,
+  ShapeStyle,
+  ShapeKind,
 } from '@/lib/types';
 import { isRowPort } from '@/lib/connection-utils';
 import { getFrameBounds } from '@/lib/frame-utils';
@@ -152,20 +155,32 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
       if (!frame) return state;
       const dx = action.x - frame.x;
       const dy = action.y - frame.y;
+      // Collect all descendant frame IDs (frames nested inside this frame, recursively)
+      const getDescendantIds = (parentId: string): string[] => {
+        const children = state.frames.filter((f) => f.parentFrameId === parentId).map((f) => f.id);
+        return children.flatMap((cid) => [cid, ...getDescendantIds(cid)]);
+      };
+      const descendantIds = new Set(getDescendantIds(action.id));
       return {
         ...state,
-        frames: state.frames.map((f) =>
-          f.id === action.id ? { ...f, x: action.x, y: action.y } : f
-        ),
+        frames: state.frames.map((f) => {
+          if (f.id === action.id) return { ...f, x: action.x, y: action.y };
+          if (descendantIds.has(f.id)) return { ...f, x: f.x + dx, y: f.y + dy };
+          return f;
+        }),
         placedComponents: state.placedComponents.map((c) =>
-          c.frameId === action.id ? { ...c, x: c.x + dx, y: c.y + dy } : c
+          c.frameId === action.id || (c.frameId && descendantIds.has(c.frameId))
+            ? { ...c, x: c.x + dx, y: c.y + dy }
+            : c
         ),
       };
     }
     case 'REMOVE_FRAME': {
       return {
         ...state,
-        frames: state.frames.filter((f) => f.id !== action.id),
+        frames: state.frames
+          .filter((f) => f.id !== action.id)
+          .map((f) => f.parentFrameId === action.id ? { ...f, parentFrameId: undefined } : f),
         placedComponents: state.placedComponents.map((c) =>
           c.frameId === action.id ? { ...c, frameId: undefined } : c
         ),
@@ -308,11 +323,65 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
         ),
       };
     }
+    case 'UPDATE_TEXT': {
+      return {
+        ...state,
+        placedComponents: state.placedComponents.map((c) =>
+          c.id === action.id ? { ...c, text: action.text } : c
+        ),
+      };
+    }
+    case 'UPDATE_TEXT_STYLE': {
+      return {
+        ...state,
+        placedComponents: state.placedComponents.map((c) =>
+          c.id === action.id ? { ...c, textStyle: { ...c.textStyle, ...action.style } as TextStyle } : c
+        ),
+      };
+    }
+    case 'UPDATE_SHAPE_STYLE': {
+      return {
+        ...state,
+        placedComponents: state.placedComponents.map((c) =>
+          c.id === action.id && c.kind.type === 'shape'
+            ? { ...c, shapeStyle: { ...c.shapeStyle, ...action.style } as ShapeStyle }
+            : c
+        ),
+      };
+    }
+    case 'UPDATE_SHAPE_KIND': {
+      return {
+        ...state,
+        placedComponents: state.placedComponents.map((c) =>
+          c.id === action.id && c.kind.type === 'shape'
+            ? { ...c, kind: { type: 'shape', shape: action.shape } }
+            : c
+        ),
+      };
+    }
     case 'SET_COMPONENT_FRAME': {
       const updated = state.placedComponents.map((c) =>
         c.id === action.componentId ? { ...c, frameId: action.frameId ?? undefined } : c
       );
       return { ...state, placedComponents: updated };
+    }
+    case 'SET_FRAME_PARENT': {
+      const updatedFrames = state.frames.map((f) =>
+        f.id === action.frameId
+          ? { ...f, parentFrameId: action.parentFrameId ?? undefined }
+          : f
+      );
+      // Recompute zIndex for all frames based on nesting depth
+      const reindexed = updatedFrames.map((f) => {
+        let depth = 0;
+        let cur: Frame | undefined = f;
+        while (cur?.parentFrameId) {
+          cur = updatedFrames.find((x) => x.id === cur!.parentFrameId);
+          depth++;
+        }
+        return { ...f, zIndex: depth };
+      });
+      return { ...state, frames: reindexed };
     }
     case 'LOAD_DIAGRAM': {
       const allZIndexes = [
@@ -368,12 +437,20 @@ export function usePlacedComponents() {
   const [state, dispatch] = useReducer(canvasReducer, initialState);
 
   const addComponent = useCallback(
-    (kind: PaletteItemKind, x: number, y: number, width: number, height: number, frameId?: string) => {
+    (
+      kind: PaletteItemKind,
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+      frameId?: string,
+      extras?: Partial<Pick<import('@/lib/types').PlacedComponent, 'text' | 'textStyle' | 'shapeStyle'>>,
+    ) => {
       const tableData =
         kind.type === 'block' && kind.kind === 'entity-relation-table'
           ? createDefaultTableData()
           : undefined;
-      dispatch({ type: 'ADD', payload: { kind, x, y, width, height, frameId, tableData } });
+      dispatch({ type: 'ADD', payload: { kind, x, y, width, height, frameId, tableData, ...extras } });
     },
     []
   );
@@ -474,6 +551,10 @@ export function usePlacedComponents() {
     dispatch({ type: 'SET_COMPONENT_FRAME', componentId, frameId });
   }, []);
 
+  const setFrameParent = useCallback((frameId: string, parentFrameId: string | null) => {
+    dispatch({ type: 'SET_FRAME_PARENT', frameId, parentFrameId });
+  }, []);
+
   const updateTableHeader = useCallback((id: string, header: string) => {
     dispatch({ type: 'UPDATE_TABLE_HEADER', id, header });
   }, []);
@@ -499,6 +580,22 @@ export function usePlacedComponents() {
 
   const updateConnectionCardinality = useCallback((id: string, cardinality: Cardinality) => {
     dispatch({ type: 'UPDATE_CONNECTION_CARDINALITY', id, cardinality });
+  }, []);
+
+  const updateText = useCallback((id: string, text: string) => {
+    dispatch({ type: 'UPDATE_TEXT', id, text });
+  }, []);
+
+  const updateTextStyle = useCallback((id: string, style: Partial<TextStyle>) => {
+    dispatch({ type: 'UPDATE_TEXT_STYLE', id, style });
+  }, []);
+
+  const updateShapeStyle = useCallback((id: string, style: Partial<ShapeStyle>) => {
+    dispatch({ type: 'UPDATE_SHAPE_STYLE', id, style });
+  }, []);
+
+  const updateShapeKind = useCallback((id: string, shape: ShapeKind) => {
+    dispatch({ type: 'UPDATE_SHAPE_KIND', id, shape });
   }, []);
 
   const loadDiagram = useCallback(
@@ -534,6 +631,7 @@ export function usePlacedComponents() {
     renameComponent,
     resizeFrame,
     setComponentFrame,
+    setFrameParent,
     loadDiagram,
     updateTableHeader,
     addTableRow: addTableRowAction,
@@ -541,5 +639,9 @@ export function usePlacedComponents() {
     renameTableRow: renameTableRowAction,
     cycleTableKey: cycleTableKeyAction,
     updateConnectionCardinality,
+    updateText,
+    updateTextStyle,
+    updateShapeStyle,
+    updateShapeKind,
   };
 }

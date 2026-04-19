@@ -80,12 +80,17 @@ export default function Page() {
           renameComponent={canvasHook.renameComponent}
           resizeFrame={canvasHook.resizeFrame}
           setComponentFrame={canvasHook.setComponentFrame}
+          setFrameParent={canvasHook.setFrameParent}
           updateTableHeader={canvasHook.updateTableHeader}
           addTableRow={canvasHook.addTableRow}
           removeTableRow={canvasHook.removeTableRow}
           renameTableRow={canvasHook.renameTableRow}
           cycleTableKey={canvasHook.cycleTableKey}
           updateConnectionCardinality={canvasHook.updateConnectionCardinality}
+          updateText={canvasHook.updateText}
+          updateTextStyle={canvasHook.updateTextStyle}
+          updateShapeStyle={canvasHook.updateShapeStyle}
+          updateShapeKind={canvasHook.updateShapeKind}
           transform={canvasTransformHook.transform}
           canvasRef={canvasRef}
           didPanRef={canvasTransformHook.didPanRef}

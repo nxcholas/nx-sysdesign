@@ -54,6 +54,9 @@ export function getComponentRole(kind: PaletteItemKind): ComponentRole {
     const def = getBlockDef(kind.kind);
     return def?.role ?? 'entity';
   }
+  if (kind.type === 'text-block' || kind.type === 'shape') {
+    return 'entity';
+  }
   return 'process';
 }
 
@@ -404,8 +407,9 @@ export function getSmartRoutePoints(
     }
   }
 
-  // Fallback: direct connection (should rarely reach here)
-  return removeCollinear([srcPortPos, sa, ta, tgtPortPos]);
+  // Fallback: force an orthogonal L-shape (horizontal first, then vertical)
+  const turn = { x: ta.x, y: sa.y };
+  return removeCollinear([srcPortPos, sa, turn, ta, tgtPortPos]);
 }
 
 /** Returns the point at the midpoint along a polyline (by arc-length). */

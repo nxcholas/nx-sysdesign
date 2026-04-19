@@ -19,10 +19,14 @@ export type ComponentRole = 'entity' | 'process';
 
 // --- Palette / Drag Types ---
 
+export type ShapeKind = 'diamond' | 'square' | 'triangle' | 'rhombus' | 'circle';
+
 export type PaletteItemKind =
   | { type: 'http-method'; method: HttpMethod }
   | { type: 'status-code'; group: StatusCodeGroup; code?: number; label?: string }
-  | { type: 'block'; kind: BlockKind };
+  | { type: 'block'; kind: BlockKind }
+  | { type: 'text-block' }
+  | { type: 'shape'; shape: ShapeKind };
 
 export type DragPayload = PaletteItemKind;
 
@@ -41,13 +45,31 @@ export interface PaletteSection {
 
 // --- Canvas Tool Types ---
 
-export type CanvasTool = 'select' | 'pan' | 'frame';
+export type CanvasTool = 'select' | 'pan' | 'frame' | 'text-block' | 'shape';
 
 export interface SelectionRect {
   startX: number;
   startY: number;
   endX: number;
   endY: number;
+}
+
+// --- Shape & Text Style Types ---
+
+export interface ShapeStyle {
+  fill: string;
+  stroke: string;
+  strokeWidth: 1 | 2 | 3;
+}
+
+export interface TextStyle {
+  fontSize: 12 | 14 | 16 | 20 | 24 | 32;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  strikethrough: boolean;
+  color: string;
+  align: 'left' | 'center' | 'right';
 }
 
 // --- Canvas Types ---
@@ -68,6 +90,7 @@ export interface Frame {
   width: number;
   height: number;
   zIndex: number;
+  parentFrameId?: string;
 }
 
 // --- Placed Component Types ---
@@ -97,6 +120,12 @@ export interface PlacedComponent {
   frameId?: string;
   /** Only populated when kind is a block with kind 'entity-relation-table'. */
   tableData?: EntityRelationData;
+  /** Present when kind is text-block or shape. */
+  text?: string;
+  /** Present when kind is text-block or shape. */
+  textStyle?: TextStyle;
+  /** Present when kind is shape. */
+  shapeStyle?: ShapeStyle;
 }
 
 // --- Connection Types ---
@@ -159,12 +188,17 @@ export type CanvasAction =
   | { type: 'RENAME_COMPONENT'; id: string; label: string }
   | { type: 'RESIZE_FRAME'; id: string; width: number; height: number; x: number; y: number }
   | { type: 'SET_COMPONENT_FRAME'; componentId: string; frameId: string | null }
+  | { type: 'SET_FRAME_PARENT'; frameId: string; parentFrameId: string | null }
   | { type: 'UPDATE_TABLE_HEADER'; id: string; header: string }
   | { type: 'ADD_TABLE_ROW'; id: string; rowId?: string; name?: string; focus?: boolean }
   | { type: 'REMOVE_TABLE_ROW'; id: string; rowId: string }
   | { type: 'RENAME_TABLE_ROW'; id: string; rowId: string; name: string }
   | { type: 'CYCLE_TABLE_KEY'; id: string; rowId: string }
   | { type: 'UPDATE_CONNECTION_CARDINALITY'; id: string; cardinality: Cardinality }
+  | { type: 'UPDATE_TEXT'; id: string; text: string }
+  | { type: 'UPDATE_TEXT_STYLE'; id: string; style: Partial<TextStyle> }
+  | { type: 'UPDATE_SHAPE_STYLE'; id: string; style: Partial<ShapeStyle> }
+  | { type: 'UPDATE_SHAPE_KIND'; id: string; shape: ShapeKind }
   | { type: 'LOAD_DIAGRAM'; payload: Pick<DiagramSchema, 'components' | 'connections' | 'frames'> };
 
 export interface CanvasState {

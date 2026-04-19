@@ -6,6 +6,8 @@ import { HttpMethodBadge } from '@/components/features/blocks/http-method-badge'
 import { StatusCodeBadge } from '@/components/features/blocks/status-code-badge';
 import { BlockRenderer } from '@/components/features/blocks/block-renderer';
 import { EntityRelationTable } from '@/components/features/blocks/entity-relation-table';
+import { TextBlockRenderer } from './text-block-renderer';
+import { ShapeRenderer } from './shape-renderer';
 import { DeleteButton } from './delete-button';
 import { ResizeHandles } from './resize-handles';
 import { ConnectionPort } from './connection-port';
@@ -16,13 +18,16 @@ interface PlacedComponentItemProps {
   component: PlacedComponent;
   isSelected: boolean;
   transform: CanvasTransform;
+  autoFocus?: boolean;
   onSelect: (id: string | null) => void;
   onMove: (id: string, x: number, y: number) => void;
   onRemove: (id: string) => void;
   onResize: (id: string, width: number, height: number) => void;
+  onResizeWithMove?: (id: string, x: number, y: number, width: number, height: number) => void;
   onConnectionDragStart: (componentId: string, port: PortSide, e: React.PointerEvent) => void;
   onConnectionDragEnd: (componentId: string, port: PortSide) => void;
   onRename: (id: string, label: string) => void;
+  onTextChange: (id: string, text: string) => void;
   isConnectionDragging: boolean;
   highlightedPorts: Set<string>;
   frames: Frame[];
@@ -39,7 +44,11 @@ interface ComponentVisualProps {
   component: PlacedComponent;
   isSelected: boolean;
   isConnectionDragging: boolean;
+  autoFocus?: boolean;
+  onSelect?: () => void;
   onRename: (id: string, label: string) => void;
+  onTextChange: (id: string, text: string) => void;
+  onResize: (id: string, width: number, height: number) => void;
   onUpdateTableHeader: (id: string, header: string) => void;
   onAddTableRow: (id: string, rowId?: string, name?: string) => void;
   onRemoveTableRow: (id: string, rowId: string) => void;
@@ -52,7 +61,11 @@ function ComponentVisual({
   component,
   isSelected,
   isConnectionDragging,
+  autoFocus,
+  onSelect,
   onRename,
+  onTextChange,
+  onResize,
   onUpdateTableHeader,
   onAddTableRow,
   onRemoveTableRow,
@@ -67,6 +80,28 @@ function ComponentVisual({
   }
   if (kind.type === 'status-code') {
     return <StatusCodeBadge group={kind.group} code={kind.code} label={kind.label} size="md" />;
+  }
+  if (kind.type === 'text-block') {
+    return (
+      <TextBlockRenderer
+        component={component}
+        isSelected={isSelected}
+        autoFocus={autoFocus}
+        onTextChange={onTextChange}
+        onSelect={onSelect}
+        onResize={onResize}
+      />
+    );
+  }
+  if (kind.type === 'shape') {
+    return (
+      <ShapeRenderer
+        component={component}
+        isSelected={isSelected}
+        onTextChange={onTextChange}
+        onResize={onResize}
+      />
+    );
   }
   if (kind.type === 'block') {
     if (kind.kind === 'entity-relation-table' && component.tableData) {
@@ -105,13 +140,16 @@ export function PlacedComponentItem({
   component,
   isSelected,
   transform,
+  autoFocus,
   onSelect,
   onMove,
   onRemove,
   onResize,
+  onResizeWithMove,
   onConnectionDragStart,
   onConnectionDragEnd,
   onRename,
+  onTextChange,
   isConnectionDragging,
   highlightedPorts,
   frames,
@@ -129,8 +167,11 @@ export function PlacedComponentItem({
     compX: number;
     compY: number;
   } | null>(null);
+  const hasCapturedRef = useRef(false);
 
-  const isBlock = component.kind.type === 'block';
+  const isBlock = component.kind.type === 'block' || component.kind.type === 'text-block' || component.kind.type === 'shape';
+
+  const DRAG_THRESHOLD = 4;
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
@@ -138,7 +179,7 @@ export function PlacedComponentItem({
       if (isConnectionDragging) return;
       e.stopPropagation();
       onSelect(component.id);
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      hasCapturedRef.current = false;
       dragStartRef.current = {
         pointerX: e.clientX,
         pointerY: e.clientY,
@@ -152,6 +193,13 @@ export function PlacedComponentItem({
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!dragStartRef.current) return;
+      if (!hasCapturedRef.current) {
+        const sdx = e.clientX - dragStartRef.current.pointerX;
+        const sdy = e.clientY - dragStartRef.current.pointerY;
+        if (Math.hypot(sdx, sdy) < DRAG_THRESHOLD) return;
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        hasCapturedRef.current = true;
+      }
       const dx = (e.clientX - dragStartRef.current.pointerX) / transform.scale;
       const dy = (e.clientY - dragStartRef.current.pointerY) / transform.scale;
       const newX = snapToGrid(dragStartRef.current.compX + dx);
@@ -190,7 +238,9 @@ export function PlacedComponentItem({
       onHighlightFrame(null);
     }
     dragStartRef.current = null;
-    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    hasCapturedRef.current = false;
+    const el = e.currentTarget as HTMLElement;
+    if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
   }, [component.id, component.width, component.height, component.frameId, transform.scale, frames, onSetComponentFrame, onHighlightFrame]);
 
   return (
@@ -217,7 +267,11 @@ export function PlacedComponentItem({
         component={component}
         isSelected={isSelected}
         isConnectionDragging={isConnectionDragging}
+        autoFocus={autoFocus}
+        onSelect={() => onSelect(component.id)}
         onRename={onRename}
+        onTextChange={onTextChange}
+        onResize={onResize}
         onUpdateTableHeader={onUpdateTableHeader}
         onAddTableRow={onAddTableRow}
         onRemoveTableRow={onRemoveTableRow}
@@ -256,6 +310,7 @@ export function PlacedComponentItem({
           component={component}
           transform={transform}
           onResize={onResize}
+          onResizeWithMove={onResizeWithMove}
         />
       )}
     </div>

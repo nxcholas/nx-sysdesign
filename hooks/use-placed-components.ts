@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useCallback } from 'react';
+import { useReducer, useCallback, useRef } from 'react';
 import type {
   CanvasState,
   CanvasAction,
@@ -418,6 +418,21 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
         nextZIndex: allZIndexes.length === 0 ? 1 : Math.max(...allZIndexes) + 1,
       };
     }
+    case 'PASTE': {
+      const baseZ = state.nextZIndex;
+      const compsWithZ = action.components.map((c, i) => ({ ...c, zIndex: baseZ + i }));
+      return {
+        ...state,
+        placedComponents: [...state.placedComponents, ...compsWithZ],
+        connections: [...state.connections, ...action.connections],
+        selectedIds: compsWithZ.map((c) => c.id),
+        selectedConnectionId: null,
+        selectedFrameId: null,
+        nextZIndex: baseZ + action.components.length,
+      };
+    }
+    case 'RESTORE_STATE':
+      return action.state;
     default:
       return state;
   }
@@ -433,8 +448,46 @@ const initialState: CanvasState = {
   selectedFrameId: null,
 };
 
+const MUTATION_ACTIONS = new Set([
+  'ADD', 'MOVE', 'REMOVE', 'REMOVE_MANY', 'RESIZE',
+  'ADD_CONNECTION', 'REMOVE_CONNECTION',
+  'ADD_FRAME', 'MOVE_FRAME', 'REMOVE_FRAME', 'RENAME_FRAME', 'RENAME_COMPONENT',
+  'RESIZE_FRAME', 'SET_COMPONENT_FRAME', 'SET_FRAME_PARENT',
+  'UPDATE_TABLE_HEADER', 'ADD_TABLE_ROW', 'REMOVE_TABLE_ROW',
+  'RENAME_TABLE_ROW', 'CYCLE_TABLE_KEY',
+  'UPDATE_CONNECTION_CARDINALITY', 'UPDATE_TEXT', 'UPDATE_TEXT_STYLE',
+  'UPDATE_SHAPE_STYLE', 'UPDATE_SHAPE_KIND', 'PASTE',
+]);
+
 export function usePlacedComponents() {
-  const [state, dispatch] = useReducer(canvasReducer, initialState);
+  const [state, rawDispatch] = useReducer(canvasReducer, initialState);
+  const historyRef = useRef<CanvasState[]>([]);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const skipHistoryRef = useRef(false);
+
+  const dispatch = useCallback((action: CanvasAction) => {
+    if (!skipHistoryRef.current && MUTATION_ACTIONS.has(action.type)) {
+      historyRef.current = [...historyRef.current.slice(-49), stateRef.current];
+    }
+    rawDispatch(action);
+  }, []);
+
+  const undo = useCallback(() => {
+    if (historyRef.current.length === 0) return;
+    const prev = historyRef.current[historyRef.current.length - 1]!;
+    historyRef.current = historyRef.current.slice(0, -1);
+    rawDispatch({ type: 'RESTORE_STATE', state: prev });
+  }, []);
+
+  const beginDragHistory = useCallback(() => {
+    historyRef.current = [...historyRef.current.slice(-49), stateRef.current];
+    skipHistoryRef.current = true;
+  }, []);
+
+  const endDragHistory = useCallback(() => {
+    skipHistoryRef.current = false;
+  }, []);
 
   const addComponent = useCallback(
     (
@@ -605,6 +658,13 @@ export function usePlacedComponents() {
     []
   );
 
+  const pasteComponents = useCallback(
+    (components: import('@/lib/types').PlacedComponent[], connections: import('@/lib/types').Connection[]) => {
+      dispatch({ type: 'PASTE', components, connections });
+    },
+    []
+  );
+
   return {
     state,
     placedComponents: state.placedComponents,
@@ -643,5 +703,9 @@ export function usePlacedComponents() {
     updateTextStyle,
     updateShapeStyle,
     updateShapeKind,
+    undo,
+    pasteComponents,
+    beginDragHistory,
+    endDragHistory,
   };
 }

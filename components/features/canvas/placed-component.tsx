@@ -24,6 +24,8 @@ interface PlacedComponentItemProps {
   onRemove: (id: string) => void;
   onResize: (id: string, width: number, height: number) => void;
   onResizeWithMove?: (id: string, x: number, y: number, width: number, height: number) => void;
+  onBeginDragHistory: () => void;
+  onEndDragHistory: () => void;
   onConnectionDragStart: (componentId: string, port: PortSide, e: React.PointerEvent) => void;
   onConnectionDragEnd: (componentId: string, port: PortSide) => void;
   onRename: (id: string, label: string) => void;
@@ -146,6 +148,8 @@ export function PlacedComponentItem({
   onRemove,
   onResize,
   onResizeWithMove,
+  onBeginDragHistory,
+  onEndDragHistory,
   onConnectionDragStart,
   onConnectionDragEnd,
   onRename,
@@ -199,6 +203,7 @@ export function PlacedComponentItem({
         if (Math.hypot(sdx, sdy) < DRAG_THRESHOLD) return;
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
         hasCapturedRef.current = true;
+        onBeginDragHistory();
       }
       const dx = (e.clientX - dragStartRef.current.pointerX) / transform.scale;
       const dy = (e.clientY - dragStartRef.current.pointerY) / transform.scale;
@@ -211,7 +216,7 @@ export function PlacedComponentItem({
       const targetFrame = frames.find((f) => isPointInsideFrame(center, f));
       onHighlightFrame(targetFrame?.id ?? null);
     },
-    [component.id, component.width, component.height, transform.scale, onMove, frames, onHighlightFrame]
+    [component.id, component.width, component.height, transform.scale, onMove, frames, onHighlightFrame, onBeginDragHistory]
   );
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
@@ -237,17 +242,25 @@ export function PlacedComponentItem({
 
       onHighlightFrame(null);
     }
+    if (hasCapturedRef.current) onEndDragHistory();
     dragStartRef.current = null;
     hasCapturedRef.current = false;
     const el = e.currentTarget as HTMLElement;
     if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
-  }, [component.id, component.width, component.height, component.frameId, transform.scale, frames, onSetComponentFrame, onHighlightFrame]);
+  }, [component.id, component.width, component.height, component.frameId, transform.scale, frames, onSetComponentFrame, onHighlightFrame, onEndDragHistory]);
+
+  const handlePointerCancel = useCallback(() => {
+    if (hasCapturedRef.current) onEndDragHistory();
+    dragStartRef.current = null;
+    hasCapturedRef.current = false;
+  }, [onEndDragHistory]);
 
   return (
     <div
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
       style={{
         position: 'absolute',
         left: component.x,
@@ -311,6 +324,8 @@ export function PlacedComponentItem({
           transform={transform}
           onResize={onResize}
           onResizeWithMove={onResizeWithMove}
+          onBeginDragHistory={onBeginDragHistory}
+          onEndDragHistory={onEndDragHistory}
         />
       )}
     </div>

@@ -8,6 +8,7 @@ import { useMarqueeSelect } from '@/hooks/use-marquee-select';
 import { useFrameDraw } from '@/hooks/use-frame-draw';
 import { useTextBlockPlace } from '@/hooks/use-text-block-place';
 import { useShapeDraw } from '@/hooks/use-shape-draw';
+import { useClipboard } from '@/hooks/use-clipboard';
 import { BADGE_DIMENSIONS, GRID_SIZE } from '@/lib/constants';
 import { getBlockDef } from '@/lib/block-registry';
 import type {
@@ -102,6 +103,11 @@ export interface CanvasRootProps {
   updateTextStyle: (id: string, style: Partial<TextStyle>) => void;
   updateShapeStyle: (id: string, style: Partial<ShapeStyle>) => void;
   updateShapeKind: (id: string, shape: ShapeKind) => void;
+  // Clipboard & history
+  undo: () => void;
+  pasteComponents: (components: PlacedComponent[], connections: Connection[]) => void;
+  beginDragHistory: () => void;
+  endDragHistory: () => void;
   // Diagram persistence callback
   onStateChange: () => void;
 }
@@ -152,6 +158,10 @@ export function CanvasRoot(props: CanvasRootProps) {
     handlePointerMove,
     handlePointerUp,
     resetTransform,
+    undo,
+    pasteComponents,
+    beginDragHistory,
+    endDragHistory,
     onStateChange,
   } = props;
 
@@ -171,6 +181,17 @@ export function CanvasRoot(props: CanvasRootProps) {
   placedComponentsRef.current = placedComponents;
   const framesRef = useRef(frames);
   framesRef.current = frames;
+  const connectionsRef = useRef(connections);
+  connectionsRef.current = connections;
+  const selectedIdsRef = useRef(selectedIds);
+  selectedIdsRef.current = selectedIds;
+
+  const { copy: clipboardCopy, paste: clipboardPaste } = useClipboard(
+    () => selectedIdsRef.current,
+    () => placedComponentsRef.current,
+    () => connectionsRef.current,
+    pasteComponents,
+  );
 
   const {
     connectionDragState,
@@ -243,16 +264,45 @@ export function CanvasRoot(props: CanvasRootProps) {
     onStateChange();
   }, [placedComponents, connections, frames, onStateChange]);
 
-  // Keyboard shortcut: Delete/Backspace to remove selected component(s) or connection
+  // Keyboard shortcuts: Delete/Backspace, Ctrl+C/V/Z
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (selectedIds.length === 0 && !selectedConnectionId && !selectedFrameId) return;
-      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
       const active = document.activeElement as HTMLElement | null;
-      if (!active) return;
-      const tag = active.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      if (active.isContentEditable) return;
+      const tag = active?.tagName ?? '';
+      const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (active?.isContentEditable ?? false);
+
+      const ctrl = e.ctrlKey || e.metaKey;
+
+      // Ctrl+Z — undo (allowed even when nothing is selected)
+      if (ctrl && e.key === 'z' && !e.shiftKey) {
+        if (inInput) return;
+        e.preventDefault();
+        undo();
+        return;
+      }
+
+      // Ctrl+C — copy selected components
+      if (ctrl && e.key === 'c') {
+        if (inInput) return;
+        if (selectedIds.length > 0) {
+          e.preventDefault();
+          clipboardCopy();
+        }
+        return;
+      }
+
+      // Ctrl+V — paste clipboard
+      if (ctrl && e.key === 'v') {
+        if (inInput) return;
+        e.preventDefault();
+        clipboardPaste();
+        return;
+      }
+
+      // Delete/Backspace — remove selected
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      if (selectedIds.length === 0 && !selectedConnectionId && !selectedFrameId) return;
+      if (inInput) return;
       e.preventDefault();
       if (selectedFrameId) {
         removeFrame(selectedFrameId);
@@ -264,7 +314,7 @@ export function CanvasRoot(props: CanvasRootProps) {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selectedIds, selectedConnectionId, selectedFrameId, removeMany, removeConnection, removeFrame]);
+  }, [selectedIds, selectedConnectionId, selectedFrameId, removeMany, removeConnection, removeFrame, undo, clipboardCopy, clipboardPaste]);
 
   const onDragEnter = useCallback(() => setIsDragOver(true), []);
   const onDragLeave = useCallback((e: React.DragEvent) => {
@@ -558,6 +608,8 @@ export function CanvasRoot(props: CanvasRootProps) {
         onCycleTableKey={cycleTableKey}
         onTextChange={updateText}
         autoFocusId={autoFocusId}
+        onBeginDragHistory={beginDragHistory}
+        onEndDragHistory={endDragHistory}
       />
 
       {/* Connections overlay — rendered AFTER viewport so hit areas are above frames/components */}

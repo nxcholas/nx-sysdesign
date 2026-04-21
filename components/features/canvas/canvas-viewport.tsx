@@ -35,6 +35,8 @@ interface CanvasViewportProps {
   onCycleTableKey: (id: string, rowId: string) => void;
   onTextChange: (id: string, text: string) => void;
   autoFocusId: string | null;
+  onBeginDragHistory: () => void;
+  onEndDragHistory: () => void;
 }
 
 
@@ -70,6 +72,8 @@ export function CanvasViewport({
   onCycleTableKey,
   onTextChange,
   autoFocusId,
+  onBeginDragHistory,
+  onEndDragHistory,
 }: CanvasViewportProps) {
   const { scale, translateX, translateY } = transform;
 
@@ -126,6 +130,8 @@ export function CanvasViewport({
           onRename={onRenameComponent}
           onTextChange={onTextChange}
           autoFocus={component.id === autoFocusId}
+          onBeginDragHistory={onBeginDragHistory}
+          onEndDragHistory={onEndDragHistory}
           isConnectionDragging={connectionDragState.active}
           highlightedPorts={highlightedPorts}
           frames={frames}

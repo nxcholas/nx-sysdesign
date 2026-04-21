@@ -199,7 +199,9 @@ export type CanvasAction =
   | { type: 'UPDATE_TEXT_STYLE'; id: string; style: Partial<TextStyle> }
   | { type: 'UPDATE_SHAPE_STYLE'; id: string; style: Partial<ShapeStyle> }
   | { type: 'UPDATE_SHAPE_KIND'; id: string; shape: ShapeKind }
-  | { type: 'LOAD_DIAGRAM'; payload: Pick<DiagramSchema, 'components' | 'connections' | 'frames'> };
+  | { type: 'LOAD_DIAGRAM'; payload: Pick<DiagramSchema, 'components' | 'connections' | 'frames'> }
+  | { type: 'PASTE'; components: PlacedComponent[]; connections: Connection[] }
+  | { type: 'RESTORE_STATE'; state: CanvasState };
 
 export interface CanvasState {
   placedComponents: PlacedComponent[];

@@ -12,6 +12,8 @@ interface ResizeHandlesProps {
   transform: CanvasTransform;
   onResize: (id: string, width: number, height: number) => void;
   onResizeWithMove?: (id: string, x: number, y: number, width: number, height: number) => void;
+  onBeginDragHistory: () => void;
+  onEndDragHistory: () => void;
 }
 
 const CORNERS: Corner[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
@@ -37,7 +39,7 @@ function getCornerStyle(corner: Corner, size: number): React.CSSProperties {
   }
 }
 
-export function ResizeHandles({ component, transform, onResize, onResizeWithMove }: ResizeHandlesProps) {
+export function ResizeHandles({ component, transform, onResize, onResizeWithMove, onBeginDragHistory, onEndDragHistory }: ResizeHandlesProps) {
   const dragRef = useRef<{
     corner: Corner;
     startX: number;
@@ -59,6 +61,7 @@ export function ResizeHandles({ component, transform, onResize, onResizeWithMove
       e.stopPropagation();
       e.preventDefault();
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      onBeginDragHistory();
       dragRef.current = {
         corner,
         startX: e.clientX,
@@ -69,7 +72,7 @@ export function ResizeHandles({ component, transform, onResize, onResizeWithMove
         startCompY: component.y,
       };
     },
-    [component.width, component.height, component.x, component.y]
+    [component.width, component.height, component.x, component.y, onBeginDragHistory]
   );
 
   const handlePointerMove = useCallback(
@@ -122,9 +125,15 @@ export function ResizeHandles({ component, transform, onResize, onResizeWithMove
   );
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    if (dragRef.current) onEndDragHistory();
     dragRef.current = null;
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-  }, []);
+  }, [onEndDragHistory]);
+
+  const handlePointerCancel = useCallback(() => {
+    if (dragRef.current) onEndDragHistory();
+    dragRef.current = null;
+  }, [onEndDragHistory]);
 
   return (
     <>
@@ -135,6 +144,7 @@ export function ResizeHandles({ component, transform, onResize, onResizeWithMove
           onPointerDown={(e) => handlePointerDown(corner, e)}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
           className="rounded-sm bg-blue-500 border border-blue-300 hover:bg-blue-400 transition-colors"
         />
       ))}

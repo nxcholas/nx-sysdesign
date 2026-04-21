@@ -100,6 +100,10 @@ export default function Page() {
           handlePointerMove={canvasTransformHook.handlePointerMove}
           handlePointerUp={canvasTransformHook.handlePointerUp}
           resetTransform={canvasTransformHook.resetTransform}
+          undo={canvasHook.undo}
+          pasteComponents={canvasHook.pasteComponents}
+          beginDragHistory={canvasHook.beginDragHistory}
+          endDragHistory={canvasHook.endDragHistory}
           onStateChange={onStateChange}
         />
       </div>

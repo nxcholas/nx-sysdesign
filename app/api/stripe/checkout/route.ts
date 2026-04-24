@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   const origin = req.headers.get('origin') ?? process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
 
   const checkoutSession = await stripe.checkout.sessions.create({
-    ui_mode: 'form',
+    ui_mode: 'embedded_page',
     customer: stripeCustomerId,
     line_items: [{ price: priceId, quantity: 1 }],
     mode: 'subscription',

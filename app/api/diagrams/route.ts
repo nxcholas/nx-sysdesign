@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
 
@@ -33,10 +32,10 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null) as {
     name?: string;
-    components?: Prisma.InputJsonValue;
-    connections?: Prisma.InputJsonValue;
-    frames?: Prisma.InputJsonValue;
-    viewport?: Prisma.InputJsonValue;
+    components?: unknown;
+    connections?: unknown;
+    frames?: unknown;
+    viewport?: unknown;
   } | null;
 
   if (!body) {

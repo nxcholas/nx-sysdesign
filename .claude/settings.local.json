@@ -2,7 +2,20 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc:*)",
-      "Bash(node -e ':*)"
+      "Bash(node -e ':*)",
+      "Bash(find /c/Users/nxcho/Documents/GitHub/nx-sysdesign -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) -exec grep -l \"useEffect\" {} \\\\;)",
+      "WebSearch",
+      "WebFetch(domain:travomic.github.io)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:aws-icon.mkabumattar.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:advancedweb.hu)",
+      "WebFetch(domain:aws-icons.com)",
+      "Bash(curl -s \"https://api.github.com/repos/AwesomeLogos/aws-icons/contents/docs/images/Architecture-Service-Icons/Architecture-Service-Icons_01312024\")",
+      "Bash(python3 -c \"import json,sys; [print\\(x['name']\\) for x in json.load\\(sys.stdin\\)]\")",
+      "Bash(curl -s https://raw.githubusercontent.com/AwesomeLogos/aws-icons/main/docs/images/Architecture-Service-Icons/Architecture-Service-Icons_01312024/Arch_Management-Governance/32/Arch_AWS-CloudTrail_32.svg)",
+      "Bash(npm install *)"
     ]
   }
 }

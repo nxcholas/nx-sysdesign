@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { PricingCard } from './pricing-card';
+import { fadeUp, staggerContainer, viewportOnce } from '@/lib/motion';
 
 const freeFeatures = [
   'Unlimited local diagrams',
@@ -18,45 +20,86 @@ const proFeatures = [
   'Early access to new features',
 ];
 
-const togglePill = 'px-3 py-1.5 text-xs font-medium rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500';
-
 export function PricingSection(): React.ReactElement {
   const [annual, setAnnual] = useState(false);
 
   return (
     <div className="mx-auto max-w-6xl px-6 md:px-8">
-      <div className="flex flex-col items-start md:items-center gap-3 mb-10 md:text-center">
-        <h2 id="pricing-heading" className="text-3xl md:text-4xl font-semibold text-gray-50 tracking-tight">
-          Simple pricing.
-        </h2>
-        <p className="text-gray-400 max-w-2xl">
-          Start free. Upgrade to Pro for unlimited diagrams and cross-device sync.
-        </p>
-        <div
-          role="group"
-          aria-label="Billing period"
-          className="inline-flex items-center gap-1 p-1 rounded-full border border-panel-border bg-header-bg/60"
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        whileInView="visible"
+        viewport={viewportOnce}
+        className="flex flex-col items-start md:items-center gap-4 mb-12 md:text-center"
+      >
+        <motion.p variants={fadeUp} className="text-xs uppercase tracking-wider text-blue-400 font-mono">
+          Pricing
+        </motion.p>
+        <motion.h2
+          id="pricing-heading"
+          variants={fadeUp}
+          className="text-3xl md:text-4xl font-semibold text-gray-50 tracking-tight"
         >
-          <button
-            type="button"
-            onClick={() => setAnnual(false)}
-            aria-pressed={!annual}
-            className={`${togglePill} ${!annual ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-100'}`}
-          >
-            Monthly
-          </button>
-          <button
-            type="button"
-            onClick={() => setAnnual(true)}
-            aria-pressed={annual}
-            className={`${togglePill} ${annual ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-100'}`}
-          >
-            Annual
-          </button>
-        </div>
-      </div>
+          Simple, transparent pricing.
+        </motion.h2>
+        <motion.p variants={fadeUp} className="text-gray-400 max-w-2xl">
+          Free to get started. Upgrade to Pro for cloud sync across all your devices and priority support.
+        </motion.p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        {/* Toggle */}
+        <motion.div variants={fadeUp}>
+          <div
+            role="group"
+            aria-label="Billing period"
+            className="relative inline-flex items-center gap-1 p-1 rounded-full border border-panel-border bg-header-bg/60"
+          >
+            {/* Sliding background pill */}
+            <motion.span
+              aria-hidden="true"
+              className="absolute top-1 h-7 rounded-full bg-blue-600"
+              animate={{
+                left: annual ? 'calc(50% + 2px)' : '4px',
+                width: annual ? 'calc(50% - 6px)' : 'calc(50% - 6px)',
+              }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            />
+            <button
+              type="button"
+              onClick={() => setAnnual(false)}
+              aria-pressed={!annual}
+              className="relative z-10 px-4 py-1.5 text-xs font-medium rounded-full transition-colors
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
+                min-w-[72px]"
+              style={{ color: !annual ? '#fff' : undefined }}
+            >
+              <span className={!annual ? 'text-white' : 'text-gray-400 hover:text-gray-100'}>Monthly</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setAnnual(true)}
+              aria-pressed={annual}
+              className="relative z-10 px-4 py-1.5 text-xs font-medium rounded-full transition-colors
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
+                min-w-[72px]"
+            >
+              <span className={annual ? 'text-white' : 'text-gray-400 hover:text-gray-100'}>
+                Annual
+                {!annual && (
+                  <span className="ml-1 text-[10px] text-blue-400">–25%</span>
+                )}
+              </span>
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        whileInView="visible"
+        viewport={viewportOnce}
+        className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto"
+      >
         <PricingCard
           tier="Free"
           price="$0"
@@ -74,8 +117,9 @@ export function PricingSection(): React.ReactElement {
           ctaLabel="Get started"
           ctaHref="/sign-in"
           highlighted
+          mostPopular
         />
-      </div>
+      </motion.div>
     </div>
   );
 }

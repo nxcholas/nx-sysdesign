@@ -2,10 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Suppress default page scroll — the canvas handles its own pan/zoom */
+/* Base reset — landing page needs to scroll; canvas suppresses overflow on its own root div */
 html,
 body {
-  overflow: hidden;
   height: 100%;
   width: 100%;
 }

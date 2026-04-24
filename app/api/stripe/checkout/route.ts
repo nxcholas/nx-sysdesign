@@ -41,12 +41,12 @@ export async function POST(req: Request) {
   const origin = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
 
   const checkoutSession = await stripe.checkout.sessions.create({
-    ui_mode: 'embedded_page',
     customer: stripeCustomerId,
     line_items: [{ price: priceId, quantity: 1 }],
     mode: 'subscription',
-    return_url: `${origin}/app?checkout=success`,
+    success_url: `${origin}/app?checkout=success`,
+    cancel_url: `${origin}/app`,
   });
 
-  return NextResponse.json({ clientSecret: checkoutSession.client_secret });
+  return NextResponse.json({ url: checkoutSession.url });
 }

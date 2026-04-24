@@ -1,11 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { EmbeddedCheckout, EmbeddedCheckoutProvider } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
+import { useState } from 'react';
 import { X } from 'lucide-react';
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 const MONTHLY_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID!;
 const ANNUAL_PRICE_ID  = process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID!;
@@ -15,29 +11,25 @@ interface UpgradeModalProps {
   onSuccess?: () => void;
 }
 
-export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
+export function UpgradeModal({ onClose }: UpgradeModalProps) {
   const [selectedPrice, setSelectedPrice] = useState<'monthly' | 'annual'>('annual');
-  const [showCheckout, setShowCheckout] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const fetchClientSecret = useCallback(async () => {
+  async function handleContinue() {
+    setLoading(true);
     const priceId = selectedPrice === 'annual' ? ANNUAL_PRICE_ID : MONTHLY_PRICE_ID;
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ priceId }),
     });
-    const data = await res.json() as { clientSecret?: string };
-    return data.clientSecret ?? '';
-  }, [selectedPrice]);
-
-  const options = {
-    fetchClientSecret,
-    onComplete: () => {
-      console.log('[upgrade] EmbeddedCheckout onComplete fired');
-      onClose();
-      onSuccess?.();
-    },
-  };
+    const data = await res.json() as { url?: string };
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      setLoading(false);
+    }
+  }
 
   return (
     <div
@@ -60,69 +52,62 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
           </button>
         </div>
 
-        {!showCheckout ? (
-          <div className="px-6 pb-6 flex flex-col gap-4">
-            {/* Plan selector */}
-            <div className="grid grid-cols-2 gap-3">
-              {/* Monthly */}
-              <button
-                type="button"
-                onClick={() => setSelectedPrice('monthly')}
-                className={`flex flex-col gap-1 p-4 rounded-xl border text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                  selectedPrice === 'monthly'
-                    ? 'border-blue-500 bg-blue-500/10'
-                    : 'border-[#2a2d35] hover:border-gray-500'
-                }`}
-              >
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Monthly</span>
-                <span className="text-2xl font-bold text-gray-100">$5</span>
-                <span className="text-xs text-gray-500">per month</span>
-              </button>
-
-              {/* Annual */}
-              <button
-                type="button"
-                onClick={() => setSelectedPrice('annual')}
-                className={`relative flex flex-col gap-1 p-4 rounded-xl border text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                  selectedPrice === 'annual'
-                    ? 'border-blue-500 bg-blue-500/10'
-                    : 'border-[#2a2d35] hover:border-gray-500'
-                }`}
-              >
-                <span className="absolute top-3 right-3 text-[10px] font-semibold bg-blue-500 text-white px-1.5 py-0.5 rounded-full">
-                  Save 25%
-                </span>
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Annual</span>
-                <span className="text-2xl font-bold text-gray-100">$45</span>
-                <span className="text-xs text-gray-500">per year · $3.75/mo</span>
-              </button>
-            </div>
-
-            {/* Features list */}
-            <ul className="space-y-2 text-sm text-gray-300">
-              {['Unlimited diagrams', 'Auto-save', 'All component libraries', 'Priority support'].map((f) => (
-                <li key={f} className="flex items-center gap-2">
-                  <span className="text-blue-400">✓</span>
-                  {f}
-                </li>
-              ))}
-            </ul>
-
+        <div className="px-6 pb-6 flex flex-col gap-4">
+          {/* Plan selector */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Monthly */}
             <button
               type="button"
-              onClick={() => setShowCheckout(true)}
-              className="w-full h-11 rounded-lg bg-blue-600 hover:bg-blue-500 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              onClick={() => setSelectedPrice('monthly')}
+              className={`flex flex-col gap-1 p-4 rounded-xl border text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                selectedPrice === 'monthly'
+                  ? 'border-blue-500 bg-blue-500/10'
+                  : 'border-[#2a2d35] hover:border-gray-500'
+              }`}
             >
-              Continue to payment
+              <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Monthly</span>
+              <span className="text-2xl font-bold text-gray-100">$5</span>
+              <span className="text-xs text-gray-500">per month</span>
+            </button>
+
+            {/* Annual */}
+            <button
+              type="button"
+              onClick={() => setSelectedPrice('annual')}
+              className={`relative flex flex-col gap-1 p-4 rounded-xl border text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                selectedPrice === 'annual'
+                  ? 'border-blue-500 bg-blue-500/10'
+                  : 'border-[#2a2d35] hover:border-gray-500'
+              }`}
+            >
+              <span className="absolute top-3 right-3 text-[10px] font-semibold bg-blue-500 text-white px-1.5 py-0.5 rounded-full">
+                Save 25%
+              </span>
+              <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Annual</span>
+              <span className="text-2xl font-bold text-gray-100">$45</span>
+              <span className="text-xs text-gray-500">per year · $3.75/mo</span>
             </button>
           </div>
-        ) : (
-          <div className="px-6 pb-6">
-            <EmbeddedCheckoutProvider stripe={stripePromise} options={options}>
-              <EmbeddedCheckout />
-            </EmbeddedCheckoutProvider>
-          </div>
-        )}
+
+          {/* Features list */}
+          <ul className="space-y-2 text-sm text-gray-300">
+            {['Unlimited diagrams', 'Auto-save', 'All component libraries', 'Priority support'].map((f) => (
+              <li key={f} className="flex items-center gap-2">
+                <span className="text-blue-400">✓</span>
+                {f}
+              </li>
+            ))}
+          </ul>
+
+          <button
+            type="button"
+            onClick={handleContinue}
+            disabled={loading}
+            className="w-full h-11 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            {loading ? 'Redirecting to checkout…' : 'Continue to payment'}
+          </button>
+        </div>
       </div>
     </div>
   );

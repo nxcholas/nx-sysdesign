@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { usePlacedComponents } from '@/hooks/use-placed-components';
 import { useCanvas } from '@/hooks/use-canvas';
@@ -12,23 +13,31 @@ import { UpgradeModal } from '@/components/features/billing/upgrade-modal';
 
 export default function Page() {
   const canvasRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
   const { data: session, update: updateSession } = useSession();
 
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [pollingForPro, setPollingForPro] = useState(false);
 
-  // Poll updateSession() every second until the tier flips to 'pro' (max 12 attempts)
+  // Detect return from Stripe hosted checkout and start polling
+  useEffect(() => {
+    if (searchParams.get('checkout') === 'success') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('checkout');
+      window.history.replaceState({}, '', url.toString());
+      setPollingForPro(true);
+    }
+  }, [searchParams]);
+
+  // Poll updateSession() every second until tier flips to 'pro' (max 12 attempts)
   useEffect(() => {
     if (!pollingForPro) return;
-    console.log('[upgrade] pollingForPro=true, current tier:', session?.user?.tier);
     if (session?.user?.tier === 'pro') { setPollingForPro(false); return; }
 
     let attempts = 0;
     const interval = setInterval(async () => {
       attempts++;
-      console.log('[upgrade] polling attempt', attempts, '— calling updateSession()');
-      const updated = await updateSession();
-      console.log('[upgrade] updateSession() returned tier:', (updated as { user?: { tier?: string } } | null)?.user?.tier);
+      await updateSession();
       if (attempts >= 12) { setPollingForPro(false); clearInterval(interval); }
     }, 1000);
 
@@ -36,7 +45,6 @@ export default function Page() {
   }, [pollingForPro, session?.user?.tier, updateSession]);
 
   const handleUpgradeSuccess = useCallback(() => {
-    console.log('[upgrade] onSuccess fired — starting poll');
     setPollingForPro(true);
   }, []);
 

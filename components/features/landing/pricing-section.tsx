@@ -30,7 +30,7 @@ export function PricingSection(): React.ReactElement {
           Simple pricing.
         </h2>
         <p className="text-gray-400 max-w-2xl">
-          Free while we build. Pro unlocks sync when accounts arrive.
+          Start free. Upgrade to Pro for unlimited diagrams and cross-device sync.
         </p>
         <div
           role="group"
@@ -67,12 +67,12 @@ export function PricingSection(): React.ReactElement {
         />
         <PricingCard
           tier="Pro"
-          price={annual ? '$72' : '$8'}
+          price={annual ? '$45' : '$5'}
           period={annual ? '/year' : '/month'}
-          helper={annual ? '$6/month billed annually' : undefined}
+          helper={annual ? '$3.75/month billed annually' : undefined}
           features={proFeatures}
-          ctaLabel="Coming soon"
-          disabled
+          ctaLabel="Get started"
+          ctaHref="/sign-in"
           highlighted
         />
       </div>

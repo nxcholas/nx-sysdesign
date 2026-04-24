@@ -1,15 +1,16 @@
 'use client';
 
-import { useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { clearCurrentNamespace } from '@/lib/diagram-storage';
-import { UpgradeModal } from '@/components/features/billing/upgrade-modal';
 
-export function HeaderActions() {
+interface HeaderActionsProps {
+  onUpgrade?: () => void;
+}
+
+export function HeaderActions({ onUpgrade }: HeaderActionsProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   if (status === 'loading') {
     return (
@@ -67,7 +68,7 @@ export function HeaderActions() {
         {!isPro && (
           <button
             type="button"
-            onClick={() => setUpgradeOpen(true)}
+            onClick={() => onUpgrade?.()}
             className="px-3 py-1.5 rounded text-xs font-semibold text-white
               bg-blue-600 hover:bg-blue-500 transition-colors
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
@@ -114,7 +115,6 @@ export function HeaderActions() {
         </button>
       </div>
 
-      {upgradeOpen && <UpgradeModal onClose={() => setUpgradeOpen(false)} />}
     </>
   );
 }

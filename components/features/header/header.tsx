@@ -20,6 +20,7 @@ interface HeaderProps {
   onNewTab: () => void;
   onToggleSaveMode: (mode: SaveMode) => void;
   onManualSave: () => void;
+  onUpgrade?: () => void;
 }
 
 export function Header(props: HeaderProps): React.ReactElement {
@@ -35,6 +36,7 @@ export function Header(props: HeaderProps): React.ReactElement {
     onNewTab,
     onToggleSaveMode,
     onManualSave,
+    onUpgrade,
   } = props;
 
   return (
@@ -65,7 +67,7 @@ export function Header(props: HeaderProps): React.ReactElement {
       <Separator orientation="vertical" className="h-5 flex-shrink-0" />
 
       {/* Auth / header actions */}
-      <HeaderActions />
+      <HeaderActions onUpgrade={onUpgrade} />
     </header>
   );
 }

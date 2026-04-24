@@ -79,6 +79,7 @@ export default function Page() {
         onNewTab={diagrams.openNewDiagram}
         onToggleSaveMode={diagrams.setSaveMode}
         onManualSave={diagrams.manualSave}
+        onUpgrade={() => setUpgradeOpen(true)}
       />
       <div className="flex flex-1 overflow-hidden">
         <SidePanel />

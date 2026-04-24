@@ -9,10 +9,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const ALLOWED_PRICE_IDS = new Set([
+    process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
+    process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
+  ]);
+
   const body = await req.json().catch(() => null) as { priceId?: string } | null;
   const priceId = body?.priceId;
-  if (!priceId) {
-    return NextResponse.json({ error: 'priceId is required' }, { status: 400 });
+  if (!priceId || !ALLOWED_PRICE_IDS.has(priceId)) {
+    return NextResponse.json({ error: 'Invalid price' }, { status: 400 });
   }
 
   const userId = session.user.id;
@@ -33,7 +38,7 @@ export async function POST(req: Request) {
     stripeCustomerId = customer.id;
   }
 
-  const origin = req.headers.get('origin') ?? process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+  const origin = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
 
   const checkoutSession = await stripe.checkout.sessions.create({
     ui_mode: 'embedded_page',

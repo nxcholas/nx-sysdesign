@@ -2,6 +2,7 @@
 
 import { useRef, useCallback, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { usePlacedComponents } from '@/hooks/use-placed-components';
 import { useCanvas } from '@/hooks/use-canvas';
 import { useDiagrams } from '@/hooks/use-diagrams';
@@ -13,18 +14,18 @@ import { UpgradeModal } from '@/components/features/billing/upgrade-modal';
 export default function Page() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
+  const { update: updateSession } = useSession();
 
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
-  // Open upgrade modal automatically if redirected back from Stripe checkout
   useEffect(() => {
     if (searchParams.get('checkout') === 'success') {
-      // Clear the query param without a reload
       const url = new URL(window.location.href);
       url.searchParams.delete('checkout');
       window.history.replaceState({}, '', url.toString());
+      void updateSession();
     }
-  }, [searchParams]);
+  }, [searchParams, updateSession]);
 
   const canvasHook = usePlacedComponents();
   const canvasTransformHook = useCanvas(canvasRef);

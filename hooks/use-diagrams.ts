@@ -528,7 +528,13 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
       fetch(`/api/diagrams/${id}`, {
         method: 'PUT',
         headers: JSON_HEADERS,
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({
+          name,
+          components: updated.components,
+          connections: updated.connections,
+          frames: updated.frames,
+          viewport: updated.viewport,
+        }),
       }).catch((err) => {
         console.error('[useDiagrams] renameDiagram API error:', err);
       });

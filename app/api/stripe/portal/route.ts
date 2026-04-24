@@ -3,7 +3,7 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { stripe } from '@/lib/stripe';
 
-export async function POST(req: Request) {
+export async function POST() {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'No active subscription found' }, { status: 404 });
   }
 
-  const origin = req.headers.get('origin') ?? process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+  const origin = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
 
   const portalSession = await stripe.billingPortal.sessions.create({
     customer: subscription.stripeCustomerId,

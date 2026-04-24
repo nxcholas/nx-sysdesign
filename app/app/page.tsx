@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { usePlacedComponents } from '@/hooks/use-placed-components';
@@ -17,8 +18,13 @@ export default function Page() {
   const { data: session, update: updateSession } = useSession();
 
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState<boolean | null>(null);
   const sessionTierRef = useRef(session?.user?.tier);
   sessionTierRef.current = session?.user?.tier;
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+  }, []);
 
   // Detect return from Stripe hosted checkout and start polling
   useEffect(() => {
@@ -66,6 +72,52 @@ export default function Page() {
   const onStateChange = useCallback(() => {
     notifyStateChanged();
   }, [notifyStateChanged]);
+
+  if (isMobile === null) {
+    return <div className="h-screen w-screen bg-canvas-bg" />;
+  }
+
+  if (isMobile) {
+    return (
+      <main
+        role="alert"
+        className="h-screen w-screen flex flex-col items-center justify-center bg-canvas-bg text-gray-100 gap-6 px-6 text-center"
+      >
+        <svg
+          aria-hidden="true"
+          xmlns="http://www.w3.org/2000/svg"
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-gray-500"
+        >
+          <path d="M17 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h18a2 2 0 0 1 2 2v5" />
+          <path d="m16 22 5-5" />
+          <path d="m21 22-5-5" />
+          <path d="M8 21h4" />
+          <path d="M10 17v4" />
+        </svg>
+        <div>
+          <h1 className="text-2xl font-semibold mb-2">Desktop Only</h1>
+          <p className="text-sm text-gray-400 max-w-xs leading-relaxed">
+            SysDesign requires a desktop browser. The canvas editor uses drag,
+            zoom, and keyboard shortcuts that aren&apos;t supported on mobile.
+          </p>
+        </div>
+        <Link
+          href="/"
+          className="px-4 py-2 text-sm rounded border border-gray-600 hover:border-gray-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
+        >
+          ← Back to home
+        </Link>
+      </main>
+    );
+  }
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden">

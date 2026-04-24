@@ -12,9 +12,10 @@ const ANNUAL_PRICE_ID  = process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID!;
 
 interface UpgradeModalProps {
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function UpgradeModal({ onClose }: UpgradeModalProps) {
+export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
   const [selectedPrice, setSelectedPrice] = useState<'monthly' | 'annual'>('annual');
   const [showCheckout, setShowCheckout] = useState(false);
 
@@ -29,7 +30,13 @@ export function UpgradeModal({ onClose }: UpgradeModalProps) {
     return data.clientSecret ?? '';
   }, [selectedPrice]);
 
-  const options = { fetchClientSecret };
+  const options = {
+    fetchClientSecret,
+    onComplete: () => {
+      onClose();
+      onSuccess?.();
+    },
+  };
 
   return (
     <div

@@ -1,7 +1,6 @@
 'use client';
 
-import { useRef, useCallback, useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRef, useCallback, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePlacedComponents } from '@/hooks/use-placed-components';
 import { useCanvas } from '@/hooks/use-canvas';
@@ -13,19 +12,15 @@ import { UpgradeModal } from '@/components/features/billing/upgrade-modal';
 
 export default function Page() {
   const canvasRef = useRef<HTMLDivElement>(null);
-  const searchParams = useSearchParams();
   const { update: updateSession } = useSession();
 
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
-  useEffect(() => {
-    if (searchParams.get('checkout') === 'success') {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('checkout');
-      window.history.replaceState({}, '', url.toString());
+  const handleUpgradeSuccess = useCallback(() => {
+    setTimeout(() => {
       void updateSession();
-    }
-  }, [searchParams, updateSession]);
+    }, 1500);
+  }, [updateSession]);
 
   const canvasHook = usePlacedComponents();
   const canvasTransformHook = useCanvas(canvasRef);
@@ -126,7 +121,7 @@ export default function Page() {
         />
       </div>
 
-      {upgradeOpen && <UpgradeModal onClose={() => setUpgradeOpen(false)} />}
+      {upgradeOpen && <UpgradeModal onClose={() => setUpgradeOpen(false)} onSuccess={handleUpgradeSuccess} />}
     </div>
   );
 }

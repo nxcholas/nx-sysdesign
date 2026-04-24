@@ -41,15 +41,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: 'jwt',
   },
   callbacks: {
-    jwt({ token, user }) {
-      if (user) {
+    async jwt({ token, user }) {
+      if (user?.id) {
         token.id = user.id;
+        // Embed tier at sign-in so every request has it without a DB read
+        const dbUser = await db.user.findUnique({
+          where: { id: user.id },
+          select: { tier: true },
+        });
+        token.tier = dbUser?.tier ?? 'free';
       }
       return token;
     },
     session({ session, token }) {
       if (token.id && session.user) {
         session.user.id = token.id as string;
+        session.user.tier = (token.tier as string) ?? 'free';
       }
       return session;
     },

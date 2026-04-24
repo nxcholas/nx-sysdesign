@@ -1,15 +1,30 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { usePlacedComponents } from '@/hooks/use-placed-components';
 import { useCanvas } from '@/hooks/use-canvas';
 import { useDiagrams } from '@/hooks/use-diagrams';
 import { Header } from '@/components/features/header/header';
 import { SidePanel } from '@/components/features/side-panel/side-panel';
 import { CanvasRoot } from '@/components/features/canvas/canvas-root';
+import { UpgradeModal } from '@/components/features/billing/upgrade-modal';
 
 export default function Page() {
   const canvasRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+
+  // Open upgrade modal automatically if redirected back from Stripe checkout
+  useEffect(() => {
+    if (searchParams.get('checkout') === 'success') {
+      // Clear the query param without a reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete('checkout');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams]);
 
   const canvasHook = usePlacedComponents();
   const canvasTransformHook = useCanvas(canvasRef);
@@ -22,11 +37,14 @@ export default function Page() {
   transformRef.current = canvasTransformHook.transform;
   const getTransform = useCallback(() => transformRef.current, []);
 
+  const onUpgradeRequired = useCallback(() => setUpgradeOpen(true), []);
+
   const diagrams = useDiagrams({
     getCanvasState,
     loadDiagram: canvasHook.loadDiagram,
     getTransform,
     setTransform: canvasTransformHook.setTransform,
+    onUpgradeRequired,
   });
 
   const { notifyStateChanged } = diagrams;
@@ -106,6 +124,8 @@ export default function Page() {
           onStateChange={onStateChange}
         />
       </div>
+
+      {upgradeOpen && <UpgradeModal onClose={() => setUpgradeOpen(false)} />}
     </div>
   );
 }

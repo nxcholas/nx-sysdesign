@@ -13,8 +13,9 @@ export async function GET() {
     orderBy: { updatedAt: 'desc' },
   });
 
+  type DiagramRow = (typeof diagrams)[number];
   return NextResponse.json(
-    diagrams.map((d) => ({
+    diagrams.map((d: DiagramRow) => ({
       id: d.id,
       name: d.name,
       createdAt: d.createdAt.toISOString(),
@@ -48,7 +49,8 @@ export async function POST(req: Request) {
   const userId = session.user.id;
 
   // Atomic check-and-create to prevent TOCTOU race on free-tier cap
-  const diagram = await db.$transaction(async (tx) => {
+  type Tx = Parameters<Parameters<typeof db.$transaction>[0]>[0];
+  const diagram = await db.$transaction(async (tx: Tx) => {
     const count = await tx.diagram.count({ where: { userId } });
     if (count >= 1) return null;
     return tx.diagram.create({

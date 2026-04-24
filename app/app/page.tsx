@@ -20,12 +20,15 @@ export default function Page() {
   // Poll updateSession() every second until the tier flips to 'pro' (max 12 attempts)
   useEffect(() => {
     if (!pollingForPro) return;
+    console.log('[upgrade] pollingForPro=true, current tier:', session?.user?.tier);
     if (session?.user?.tier === 'pro') { setPollingForPro(false); return; }
 
     let attempts = 0;
     const interval = setInterval(async () => {
       attempts++;
-      await updateSession();
+      console.log('[upgrade] polling attempt', attempts, '— calling updateSession()');
+      const updated = await updateSession();
+      console.log('[upgrade] updateSession() returned tier:', (updated as { user?: { tier?: string } } | null)?.user?.tier);
       if (attempts >= 12) { setPollingForPro(false); clearInterval(interval); }
     }, 1000);
 
@@ -33,6 +36,7 @@ export default function Page() {
   }, [pollingForPro, session?.user?.tier, updateSession]);
 
   const handleUpgradeSuccess = useCallback(() => {
+    console.log('[upgrade] onSuccess fired — starting poll');
     setPollingForPro(true);
   }, []);
 

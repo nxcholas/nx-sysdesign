@@ -33,6 +33,7 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
   const options = {
     fetchClientSecret,
     onComplete: () => {
+      console.log('[upgrade] EmbeddedCheckout onComplete fired');
       onClose();
       onSuccess?.();
     },

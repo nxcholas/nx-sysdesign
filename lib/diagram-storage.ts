@@ -1,15 +1,46 @@
 // Pure localStorage utilities — no React imports.
 // All reads return safe defaults on missing or corrupt data.
 // All writes swallow QuotaExceededError silently.
+//
+// Keys are namespaced per user: `sysdesign:user_<id>:<key>` for authenticated
+// users and `sysdesign:anon:<key>` for anonymous visitors. Call
+// setStorageNamespace() once the auth session is known before reading or
+// writing anything.
 
 import type { DiagramSchema, SaveMode } from '@/lib/types';
 
-// --- Storage key constants ---
+// --- Namespace management ---
 
-export const STORAGE_KEY_DIAGRAMS  = 'sysdesign:diagrams';
-export const STORAGE_KEY_ACTIVE_ID = 'sysdesign:activeDiagramId';
-export const STORAGE_KEY_OPEN_TABS = 'sysdesign:openTabIds';
-export const STORAGE_KEY_SAVE_MODE = 'sysdesign:saveMode';
+let _namespace = 'sysdesign:anon';
+
+export function setStorageNamespace(ns: string): void {
+  _namespace = ns;
+}
+
+export function clearCurrentNamespace(): void {
+  if (!isLocalStorageAvailable()) return;
+  try {
+    localStorage.removeItem(`${_namespace}:diagrams`);
+    localStorage.removeItem(`${_namespace}:activeDiagramId`);
+    localStorage.removeItem(`${_namespace}:openTabIds`);
+    localStorage.removeItem(`${_namespace}:saveMode`);
+  } catch {
+    // Swallow silently.
+  }
+}
+
+// --- Storage key helpers (dynamic, namespace-aware) ---
+
+function keyDiagrams()  { return `${_namespace}:diagrams`; }
+function keyActiveId()  { return `${_namespace}:activeDiagramId`; }
+function keyOpenTabs()  { return `${_namespace}:openTabIds`; }
+function keySaveMode()  { return `${_namespace}:saveMode`; }
+
+// Legacy named exports kept for any external consumers — point at anon namespace.
+export const STORAGE_KEY_DIAGRAMS  = 'sysdesign:anon:diagrams';
+export const STORAGE_KEY_ACTIVE_ID = 'sysdesign:anon:activeDiagramId';
+export const STORAGE_KEY_OPEN_TABS = 'sysdesign:anon:openTabIds';
+export const STORAGE_KEY_SAVE_MODE = 'sysdesign:anon:saveMode';
 
 // --- Availability guard (cached at module scope) ---
 
@@ -48,7 +79,6 @@ function safeSetItem(key: string, value: string): void {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function safeRemoveItem(key: string): void {
   if (!isLocalStorageAvailable()) return;
   try {
@@ -61,7 +91,7 @@ function safeRemoveItem(key: string): void {
 // --- Reads ---
 
 export function readAllDiagrams(): DiagramSchema[] {
-  const raw = safeGetItem(STORAGE_KEY_DIAGRAMS);
+  const raw = safeGetItem(keyDiagrams());
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
@@ -73,11 +103,11 @@ export function readAllDiagrams(): DiagramSchema[] {
 }
 
 export function readActiveDiagramId(): string | null {
-  return safeGetItem(STORAGE_KEY_ACTIVE_ID);
+  return safeGetItem(keyActiveId());
 }
 
 export function readOpenTabIds(): string[] {
-  const raw = safeGetItem(STORAGE_KEY_OPEN_TABS);
+  const raw = safeGetItem(keyOpenTabs());
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
@@ -89,7 +119,7 @@ export function readOpenTabIds(): string[] {
 }
 
 export function readSaveMode(): SaveMode {
-  const raw = safeGetItem(STORAGE_KEY_SAVE_MODE);
+  const raw = safeGetItem(keySaveMode());
   if (raw === 'manual') return 'manual';
   return 'auto';
 }
@@ -97,19 +127,19 @@ export function readSaveMode(): SaveMode {
 // --- Writes ---
 
 export function writeAllDiagrams(diagrams: DiagramSchema[]): void {
-  safeSetItem(STORAGE_KEY_DIAGRAMS, JSON.stringify(diagrams));
+  safeSetItem(keyDiagrams(), JSON.stringify(diagrams));
 }
 
 export function writeActiveDiagramId(id: string): void {
-  safeSetItem(STORAGE_KEY_ACTIVE_ID, id);
+  safeSetItem(keyActiveId(), id);
 }
 
 export function writeOpenTabIds(ids: string[]): void {
-  safeSetItem(STORAGE_KEY_OPEN_TABS, JSON.stringify(ids));
+  safeSetItem(keyOpenTabs(), JSON.stringify(ids));
 }
 
 export function writeSaveMode(mode: SaveMode): void {
-  safeSetItem(STORAGE_KEY_SAVE_MODE, mode);
+  safeSetItem(keySaveMode(), mode);
 }
 
 // --- Single-diagram operations ---
@@ -151,7 +181,6 @@ export function createBlankDiagram(name: string): DiagramSchema {
 }
 
 export function computeNextUntitledName(diagrams: DiagramSchema[]): string {
-  // Find the highest N among names matching "Untitled Diagram <N>"
   let max = 0;
   const pattern = /^Untitled Diagram (\d+)$/;
   for (const d of diagrams) {
@@ -163,3 +192,6 @@ export function computeNextUntitledName(diagrams: DiagramSchema[]): string {
   }
   return `Untitled Diagram ${max + 1}`;
 }
+
+// Keep safeRemoveItem referenced to avoid lint unused warning.
+void safeRemoveItem;

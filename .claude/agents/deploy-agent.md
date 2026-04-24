@@ -62,6 +62,37 @@ When reviewing work, prioritize:
 
 ---
 
+## Version Management
+
+Before finalizing a release, determine the correct version bump.
+
+### Step 1 — Read current version
+Read `package.json` and note the current `"version"` field (format: `MAJOR.MINOR.PATCH`).
+
+### Step 2 — Analyze changes
+Review the git diff or change summary and classify every change:
+- **Breaking changes** (API removals, renamed props, incompatible behavior) → MAJOR
+- **New features** (additive, backward-compatible) → MINOR
+- **Bug fixes, refactors, style/copy tweaks, dependency updates** → PATCH
+
+### Step 3 — Determine bump type
+Apply the highest applicable rule:
+| Changes present | Bump |
+|---|---|
+| Any breaking change | MAJOR (x+1.0.0) |
+| New feature, no breaking changes | MINOR (x.y+1.0) |
+| Only fixes/refactors/patches | PATCH (x.y.z+1) |
+
+### Step 4 — State the new version
+Output the new version string and confirm which bump type was applied and why.
+
+### Step 5 — Update version in codebase
+Update **only** `package.json` → `"version"` field.
+The header picks up the new version automatically at build time via `NEXT_PUBLIC_APP_VERSION`.
+Do not manually update `header.tsx`.
+
+---
+
 ## Required Output Format
 For each deployment task, return:
 
@@ -78,6 +109,13 @@ Include a short reason.
 
 ### Preconditions
 List anything required before deployment.
+
+### Version Bump
+State:
+- Current version (from package.json)
+- Bump type: major | minor | patch
+- New version
+- Brief reason for the bump classification
 
 ### Environment or Config Changes
 List env vars, secrets, service config, build settings, or infrastructure assumptions.

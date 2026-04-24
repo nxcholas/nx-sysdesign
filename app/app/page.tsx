@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePlacedComponents } from '@/hooks/use-placed-components';
 import { useCanvas } from '@/hooks/use-canvas';
@@ -12,15 +12,29 @@ import { UpgradeModal } from '@/components/features/billing/upgrade-modal';
 
 export default function Page() {
   const canvasRef = useRef<HTMLDivElement>(null);
-  const { update: updateSession } = useSession();
+  const { data: session, update: updateSession } = useSession();
 
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [pollingForPro, setPollingForPro] = useState(false);
+
+  // Poll updateSession() every second until the tier flips to 'pro' (max 12 attempts)
+  useEffect(() => {
+    if (!pollingForPro) return;
+    if (session?.user?.tier === 'pro') { setPollingForPro(false); return; }
+
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      await updateSession();
+      if (attempts >= 12) { setPollingForPro(false); clearInterval(interval); }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [pollingForPro, session?.user?.tier, updateSession]);
 
   const handleUpgradeSuccess = useCallback(() => {
-    setTimeout(() => {
-      void updateSession();
-    }, 1500);
-  }, [updateSession]);
+    setPollingForPro(true);
+  }, []);
 
   const canvasHook = usePlacedComponents();
   const canvasTransformHook = useCanvas(canvasRef);

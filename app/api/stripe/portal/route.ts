@@ -19,10 +19,16 @@ export async function POST() {
 
   const origin = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
 
-  const portalSession = await stripe.billingPortal.sessions.create({
-    customer: subscription.stripeCustomerId,
-    return_url: `${origin}/app`,
-  });
+  let portalSession;
+  try {
+    portalSession = await stripe.billingPortal.sessions.create({
+      customer: subscription.stripeCustomerId,
+      return_url: `${origin}/app`,
+    });
+  } catch (err) {
+    console.error('[stripe/portal] session create failed:', err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
 
   return NextResponse.json({ url: portalSession.url });
 }

@@ -53,6 +53,18 @@ export async function PUT(
   const { name, components, connections, frames, viewport } = body;
   const safeName = typeof name === 'string' ? name.trim().slice(0, 256) : undefined;
 
+  // Downgrade enforcement: free users can only save their oldest diagram
+  if (session.user.tier !== 'pro') {
+    const oldest = await db.diagram.findFirst({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+    if (oldest && oldest.id !== id) {
+      return NextResponse.json({ error: 'Read-only in free tier' }, { status: 403 });
+    }
+  }
+
   const updated = await db.diagram.update({
     where: { id, userId: session.user.id },
     data: {

@@ -48,11 +48,15 @@ export async function POST(req: Request) {
 
   const userId = session.user.id;
 
-  // Atomic check-and-create to prevent TOCTOU race on free-tier cap
+  // Atomic check-and-create — limit is tier-aware
   type Tx = Parameters<Parameters<typeof db.$transaction>[0]>[0];
   const diagram = await db.$transaction(async (tx: Tx) => {
-    const count = await tx.diagram.count({ where: { userId } });
-    if (count >= 1) return null;
+    const user = await tx.user.findUnique({ where: { id: userId }, select: { tier: true } });
+    const isPro = user?.tier === 'pro';
+    if (!isPro) {
+      const count = await tx.diagram.count({ where: { userId } });
+      if (count >= 1) return null;
+    }
     return tx.diagram.create({
       data: {
         userId,

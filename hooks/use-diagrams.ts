@@ -24,6 +24,7 @@ interface UseDiagramsOptions {
   loadDiagram: (schema: Pick<DiagramSchema, 'components' | 'connections' | 'frames'>) => void;
   getTransform: () => CanvasTransform;
   setTransform: (t: CanvasTransform) => void;
+  onUpgradeRequired?: () => void;
 }
 
 interface UseDiagramsReturn {
@@ -356,9 +357,7 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
       })
         .then((res) => {
           if (res.status === 403) {
-            window.alert(
-              'Free tier: 1 diagram limit. Sign in and upgrade to Pro for unlimited diagrams.'
-            );
+            optionsRef.current.onUpgradeRequired?.();
             return null;
           }
           if (!res.ok) return null;
@@ -529,7 +528,13 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
       fetch(`/api/diagrams/${id}`, {
         method: 'PUT',
         headers: JSON_HEADERS,
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({
+          name,
+          components: updated.components,
+          connections: updated.connections,
+          frames: updated.frames,
+          viewport: updated.viewport,
+        }),
       }).catch((err) => {
         console.error('[useDiagrams] renameDiagram API error:', err);
       });

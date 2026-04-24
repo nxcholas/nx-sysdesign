@@ -17,36 +17,29 @@ export default function Page() {
   const { data: session, update: updateSession } = useSession();
 
   const [upgradeOpen, setUpgradeOpen] = useState(false);
-  const [pollingForPro, setPollingForPro] = useState(false);
+  const sessionTierRef = useRef(session?.user?.tier);
+  sessionTierRef.current = session?.user?.tier;
 
   // Detect return from Stripe hosted checkout and start polling
   useEffect(() => {
-    if (searchParams.get('checkout') === 'success') {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('checkout');
-      window.history.replaceState({}, '', url.toString());
-      setPollingForPro(true);
-    }
-  }, [searchParams]);
-
-  // Poll updateSession() every second until tier flips to 'pro' (max 12 attempts)
-  useEffect(() => {
-    if (!pollingForPro) return;
-    if (session?.user?.tier === 'pro') { setPollingForPro(false); return; }
+    if (searchParams.get('checkout') !== 'success') return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('checkout');
+    window.history.replaceState({}, '', url.toString());
 
     let attempts = 0;
     const interval = setInterval(async () => {
+      if (sessionTierRef.current === 'pro') { clearInterval(interval); return; }
       attempts++;
       await updateSession();
-      if (attempts >= 12) { setPollingForPro(false); clearInterval(interval); }
-    }, 1000);
+      if (attempts >= 15) clearInterval(interval);
+    }, 1500);
 
     return () => clearInterval(interval);
-  }, [pollingForPro, session?.user?.tier, updateSession]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally runs once on mount
 
-  const handleUpgradeSuccess = useCallback(() => {
-    setPollingForPro(true);
-  }, []);
+  const handleUpgradeSuccess = useCallback(() => {}, []);
 
   const canvasHook = usePlacedComponents();
   const canvasTransformHook = useCanvas(canvasRef);

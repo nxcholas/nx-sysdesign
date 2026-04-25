@@ -19,9 +19,11 @@ interface HeaderProps {
   onReorderTabs: (newOrder: string[]) => void;
   onNewTab: () => void;
   showNewTab: boolean;
+  isSaving: boolean;
+  lastSavedAt: Date | null;
   onToggleSaveMode: (mode: SaveMode) => void;
   onManualSave: () => void;
-  onBeforeSignOut: () => void;
+  onBeforeSignOut: () => Promise<void>;
   onUpgrade?: () => void;
 }
 
@@ -37,6 +39,8 @@ export function Header(props: HeaderProps): React.ReactElement {
     onReorderTabs,
     onNewTab,
     showNewTab,
+    isSaving,
+    lastSavedAt,
     onToggleSaveMode,
     onManualSave,
     onBeforeSignOut,
@@ -65,6 +69,8 @@ export function Header(props: HeaderProps): React.ReactElement {
       <SaveModeToggle
         saveMode={saveMode}
         isDirty={isDirty}
+        isSaving={isSaving}
+        lastSavedAt={lastSavedAt}
         onToggle={onToggleSaveMode}
         onManualSave={onManualSave}
       />

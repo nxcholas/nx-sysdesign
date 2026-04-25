@@ -1,22 +1,60 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { SaveMode } from '@/lib/types';
 
 interface SaveModeToggleProps {
   saveMode: SaveMode;
   isDirty: boolean;
+  isSaving: boolean;
+  lastSavedAt: Date | null;
   onToggle: (mode: SaveMode) => void;
   onManualSave: () => void;
 }
 
+function formatRelative(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 10) return 'Saved just now';
+  if (seconds < 3600) return `Saved ${Math.max(1, Math.floor(seconds / 60))}m ago`;
+  return `Saved ${Math.floor(seconds / 3600)}h ago`;
+}
+
 export function SaveModeToggle(props: SaveModeToggleProps): React.ReactElement {
-  const { saveMode, isDirty, onToggle, onManualSave } = props;
+  const { saveMode, isDirty, isSaving, lastSavedAt, onToggle, onManualSave } = props;
+  const [, setTick] = useState(0);
+
+  // Re-render every 30s to keep relative timestamp current
+  useEffect(() => {
+    if (saveMode !== 'auto' || !lastSavedAt) return;
+    const id = setInterval(() => setTick((t) => t + 1), 30_000);
+    return () => clearInterval(id);
+  }, [saveMode, lastSavedAt]);
 
   const nextMode: SaveMode = saveMode === 'auto' ? 'manual' : 'auto';
 
   return (
     <div className="flex items-center gap-2 flex-shrink-0">
+      {/* Autosave status slot — spinner or timestamp */}
+      {saveMode === 'auto' && (
+        <div
+          className="min-w-[80px] text-right"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {isSaving ? (
+            <div
+              role="status"
+              aria-label="Saving…"
+              className="inline-block w-3.5 h-3.5 rounded-full border-2 border-gray-700 border-t-blue-400 animate-spin"
+            />
+          ) : lastSavedAt ? (
+            <span className="text-xs font-mono text-gray-500">
+              {formatRelative(lastSavedAt)}
+            </span>
+          ) : null}
+        </div>
+      )}
+
       {/* Toggle button */}
       <button
         type="button"

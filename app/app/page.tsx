@@ -161,6 +161,8 @@ export default function Page() {
         onNewTab={() => setShowTemplateModal(true)}
         showNewTab={diagrams.diagrams.length > 0}
         onToggleSaveMode={diagrams.setSaveMode}
+        isSaving={diagrams.isSaving}
+        lastSavedAt={diagrams.lastSavedAt}
         onManualSave={diagrams.manualSave}
         onBeforeSignOut={diagrams.manualSave}
         onUpgrade={() => setUpgradeOpen(true)}

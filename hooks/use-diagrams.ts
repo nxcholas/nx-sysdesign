@@ -34,6 +34,8 @@ interface UseDiagramsReturn {
   saveMode: SaveMode;
   isDirty: boolean;
   isLoading: boolean;
+  isSaving: boolean;
+  lastSavedAt: Date | null;
   activeDiagram: DiagramSchema | null;
   switchToDiagram: (id: string) => void;
   openNewDiagram: () => void;
@@ -42,7 +44,7 @@ interface UseDiagramsReturn {
   renameDiagram: (id: string, name: string) => void;
   reorderTabs: (newOrder: string[]) => void;
   setSaveMode: (mode: SaveMode) => void;
-  manualSave: () => void;
+  manualSave: () => Promise<void>;
   notifyStateChanged: () => void;
 }
 
@@ -58,6 +60,8 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
 
   const [namespaceReady, setNamespaceReady] = useState(false);
   const [isLoading, setIsLoadingState] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   const [diagrams, setDiagrams] = useState<DiagramSchema[]>([]);
   const [activeDiagramId, setActiveDiagramId] = useState<string>('');
@@ -89,15 +93,15 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
 
   // --- Core save logic ---
 
-  const performSave = useCallback(() => {
+  const performSave = useCallback((): Promise<void> => {
     const currentId = activeDiagramIdRef.current;
-    if (!currentId) return;
+    if (!currentId) return Promise.resolve();
 
     const canvasState = optionsRef.current.getCanvasState();
     const viewport = optionsRef.current.getTransform();
 
     const existing = diagramsRef.current.find((d) => d.id === currentId);
-    if (!existing) return;
+    if (!existing) return Promise.resolve();
 
     const updated: DiagramSchema = {
       ...existing,
@@ -111,21 +115,34 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
     // Always write to localStorage as crash-recovery cache
     writeDiagram(updated);
 
-    // Fire-and-forget API sync if authenticated
-    if (isAuthenticatedRef.current) {
-      fetch(`/api/diagrams/${currentId}`, {
-        method: 'PUT',
-        headers: JSON_HEADERS,
-        body: JSON.stringify(updated),
-      }).catch((err) => {
-        console.error('[useDiagrams] performSave API error:', err);
-      });
-    }
+    setIsSaving(true);
+
+    const finishSave = () => {
+      setIsSaving(false);
+      setLastSavedAt(new Date());
+    };
 
     setDiagrams((prev) =>
       prev.map((d) => (d.id === currentId ? updated : d))
     );
     setIsDirty(false);
+
+    // Return the API promise so callers (e.g. sign-out) can await completion
+    if (isAuthenticatedRef.current) {
+      return fetch(`/api/diagrams/${currentId}`, {
+        method: 'PUT',
+        headers: JSON_HEADERS,
+        body: JSON.stringify(updated),
+      })
+        .then(finishSave)
+        .catch((err) => {
+          console.error('[useDiagrams] performSave API error:', err);
+          finishSave();
+        });
+    }
+
+    finishSave();
+    return Promise.resolve();
   }, []);
 
   const scheduleAutoSave = useCallback(() => {
@@ -647,8 +664,8 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
 
   // --- manualSave ---
 
-  const manualSave = useCallback(() => {
-    performSave();
+  const manualSave = useCallback((): Promise<void> => {
+    return performSave();
   }, [performSave]);
 
   // --- Computed values ---
@@ -662,6 +679,8 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
     saveMode,
     isDirty,
     isLoading,
+    isSaving,
+    lastSavedAt,
     activeDiagram,
     switchToDiagram,
     openNewDiagram,

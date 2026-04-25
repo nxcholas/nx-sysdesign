@@ -4,46 +4,70 @@ const MAX_ITEMS = 500;
 const MAX_STRING = 512;
 const MAX_TEXT = 10_000;
 
-const positionSchema = z.object({
-  x: z.number(),
-  y: z.number(),
-});
+// PaletteItemKind — union matching lib/types.ts exactly
+const paletteItemKindSchema = z.union([
+  z.object({ type: z.literal('block'), kind: z.string().max(128) }),
+  z.object({ type: z.literal('text-block') }),
+  z.object({ type: z.literal('shape'), shape: z.string().max(128) }),
+  z.object({ type: z.literal('http-method'), method: z.string().max(32) }),
+  z.object({
+    type: z.literal('status-code'),
+    group: z.string().max(64),
+    code: z.number().optional(),
+    label: z.string().max(MAX_STRING).optional(),
+  }),
+]);
 
-const sizeSchema = z.object({
-  width: z.number().positive(),
-  height: z.number().positive(),
-});
-
-const paletteItemKindSchema = z.object({
-  type: z.literal('block'),
-  kind: z.string().max(128),
-});
-
+// PlacedComponent — flat x/y/width/height matching lib/types.ts
 const placedComponentSchema = z.object({
   id: z.string().max(128),
   kind: paletteItemKindSchema,
-  position: positionSchema,
-  size: sizeSchema,
+  x: z.number(),
+  y: z.number(),
+  width: z.number().positive(),
+  height: z.number().positive(),
+  zIndex: z.number(),
   label: z.string().max(MAX_STRING).optional(),
+  frameId: z.string().max(128).optional(),
   text: z.string().max(MAX_TEXT).optional(),
-  frameId: z.string().max(128).nullable().optional(),
-  // allow extra fields from future versions without breaking
-}).strip();
+  textStyle: z.object({
+    fontSize: z.number(),
+    bold: z.boolean(),
+    italic: z.boolean(),
+    underline: z.boolean(),
+    strikethrough: z.boolean(),
+    color: z.string().max(32),
+    align: z.enum(['left', 'center', 'right']),
+  }).optional(),
+  shapeStyle: z.object({
+    fill: z.string().max(32),
+    stroke: z.string().max(32),
+    strokeWidth: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  }).optional(),
+  tableData: z.unknown().optional(), // complex nested structure, validated loosely
+}).loose(); // allow future fields without breaking saves
 
+// Connection — sourceId/targetId/sourcePort/targetPort matching lib/types.ts
 const connectionSchema = z.object({
   id: z.string().max(128),
-  fromId: z.string().max(128),
-  toId: z.string().max(128),
-  label: z.string().max(MAX_STRING).optional(),
-}).strip();
+  sourceId: z.string().max(128),
+  targetId: z.string().max(128),
+  sourcePort: z.unknown(),
+  targetPort: z.unknown(),
+  cardinality: z.unknown().optional(),
+}).loose();
 
+// Frame — flat x/y/width/height/label/zIndex matching lib/types.ts
 const frameSchema = z.object({
   id: z.string().max(128),
-  name: z.string().max(MAX_STRING),
-  position: positionSchema,
-  size: sizeSchema,
-  parentId: z.string().max(128).nullable().optional(),
-}).strip();
+  label: z.string().max(MAX_STRING),
+  x: z.number(),
+  y: z.number(),
+  width: z.number().positive(),
+  height: z.number().positive(),
+  zIndex: z.number(),
+  parentFrameId: z.string().max(128).optional(),
+}).loose();
 
 const viewportSchema = z.object({
   scale: z.number().positive().max(100),
@@ -75,5 +99,8 @@ export async function parseDiagramBody(req: Request): Promise<DiagramBody | null
   }
 
   const result = diagramBodySchema.safeParse(raw);
+  if (!result.success) {
+    console.error('[diagram-schema] validation failed:', result.error.issues.slice(0, 5));
+  }
   return result.success ? result.data : null;
 }

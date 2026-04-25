@@ -8,7 +8,7 @@ import { AccountModal } from './account-modal';
 
 interface HeaderActionsProps {
   onUpgrade?: () => void;
-  onBeforeSignOut: () => void;
+  onBeforeSignOut: () => Promise<void>;
 }
 
 export function HeaderActions({ onUpgrade, onBeforeSignOut }: HeaderActionsProps) {
@@ -73,7 +73,7 @@ export function HeaderActions({ onUpgrade, onBeforeSignOut }: HeaderActionsProps
         {/* Sign out */}
         <button
           type="button"
-          onClick={() => { onBeforeSignOut(); clearCurrentNamespace(); signOut({ callbackUrl: '/sign-in' }); }}
+          onClick={() => { void onBeforeSignOut().then(() => { clearCurrentNamespace(); signOut({ callbackUrl: '/sign-in' }); }); }}
           className="text-xs text-gray-400 hover:text-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
         >
           Sign out

@@ -8,7 +8,7 @@ import { clearCurrentNamespace } from "@/lib/diagram-storage";
 interface AccountModalProps {
   onClose: () => void;
   onUpgrade: () => void;
-  onBeforeSignOut: () => void;
+  onBeforeSignOut: () => Promise<void>;
 }
 
 interface SubscriptionData {
@@ -301,9 +301,10 @@ export function AccountModal({ onClose, onUpgrade, onBeforeSignOut }: AccountMod
             <button
               type="button"
               onClick={() => {
-                onBeforeSignOut();
-                clearCurrentNamespace();
-                signOut({ callbackUrl: "/sign-in" });
+                void onBeforeSignOut().then(() => {
+                  clearCurrentNamespace();
+                  signOut({ callbackUrl: "/sign-in" });
+                });
               }}
               className="text-xs text-gray-500 hover:text-red-400 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded"
             >

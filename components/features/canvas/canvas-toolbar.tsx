@@ -9,6 +9,8 @@ interface CanvasToolbarProps {
   activeTool: CanvasTool;
   onToolChange: (tool: CanvasTool) => void;
   onShapeSelect: (shape: ShapeKind) => void;
+  flowVisible: boolean;
+  onFlowToggle: () => void;
 }
 
 function CursorIcon() {
@@ -57,7 +59,19 @@ function ShapeIcon() {
   );
 }
 
-export function CanvasToolbar({ activeTool, onToolChange, onShapeSelect }: CanvasToolbarProps) {
+function DataFlowIcon({ active }: { active: boolean }) {
+  return (
+    <svg width={16} height={16} viewBox="0 0 16 16">
+      {active ? (
+        <circle cx="8" cy="8" r="5" fill="currentColor" />
+      ) : (
+        <circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" strokeWidth={1.5} />
+      )}
+    </svg>
+  );
+}
+
+export function CanvasToolbar({ activeTool, onToolChange, onShapeSelect, flowVisible, onFlowToggle }: CanvasToolbarProps) {
   const [shapePopoverOpen, setShapePopoverOpen] = useState(false);
 
   const btnBase =
@@ -147,6 +161,26 @@ export function CanvasToolbar({ activeTool, onToolChange, onShapeSelect }: Canva
           onClick={() => onToolChange('pan')}
         >
           <HandIcon />
+        </button>
+      </Tooltip>
+
+      <div className="w-px h-5 bg-panel-border" />
+
+      <Tooltip content={<>Data flow <kbd className="ml-1 px-1 rounded bg-gray-700 text-[10px] font-mono">A</kbd></>}>
+        <button
+          type="button"
+          aria-label="Toggle data flow"
+          aria-pressed={flowVisible}
+          className={`${btnBase} ${flowVisible ? btnActive : btnInactive}`}
+          onClick={onFlowToggle}
+        >
+          {flowVisible ? (
+            <span className="animate-pulse">
+              <DataFlowIcon active={true} />
+            </span>
+          ) : (
+            <DataFlowIcon active={false} />
+          )}
         </button>
       </Tooltip>
     </div>

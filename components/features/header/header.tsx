@@ -1,12 +1,13 @@
 'use client';
 
 import React from 'react';
-import type { SaveMode } from '@/lib/types';
+import type { SaveMode, PlacedComponent, Frame, CanvasTransform } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { BrandLockup } from '@/components/ui/brand-lockup';
 import { HeaderActions } from './header-actions';
 import { DiagramTabs } from './diagram-tabs';
 import { SaveModeToggle } from './save-mode-toggle';
+import { ExportButton } from '@/components/features/canvas/export-button';
 
 interface HeaderProps {
   tabs: Array<{ id: string; name: string }>;
@@ -25,6 +26,11 @@ interface HeaderProps {
   onManualSave: () => void;
   onBeforeSignOut: () => Promise<void>;
   onUpgrade?: () => void;
+  exportLayerRef: React.RefObject<HTMLDivElement | null>;
+  placedComponents: PlacedComponent[];
+  frames: Frame[];
+  activeDiagramName: string;
+  transform: CanvasTransform;
 }
 
 export function Header(props: HeaderProps): React.ReactElement {
@@ -45,6 +51,11 @@ export function Header(props: HeaderProps): React.ReactElement {
     onManualSave,
     onBeforeSignOut,
     onUpgrade,
+    exportLayerRef,
+    placedComponents,
+    frames,
+    activeDiagramName,
+    transform,
   } = props;
 
   return (
@@ -73,6 +84,14 @@ export function Header(props: HeaderProps): React.ReactElement {
         lastSavedAt={lastSavedAt}
         onToggle={onToggleSaveMode}
         onManualSave={onManualSave}
+      />
+
+      <ExportButton
+        exportLayerRef={exportLayerRef}
+        placedComponents={placedComponents}
+        frames={frames}
+        diagramName={activeDiagramName}
+        transform={transform}
       />
 
       <Separator orientation="vertical" className="h-5 flex-shrink-0" />

@@ -64,6 +64,7 @@ export interface CanvasRootProps {
   selectedFrameId: string | null;
   transform: CanvasTransform;
   canvasRef: React.RefObject<HTMLDivElement | null>;
+  exportLayerRef: React.RefObject<HTMLDivElement | null>;
   // Callbacks — component
   addComponent: (kind: PaletteItemKind, x: number, y: number, width: number, height: number, frameId?: string, extras?: Partial<Pick<PlacedComponent, 'text' | 'textStyle' | 'shapeStyle'>>) => void;
   moveComponent: (id: string, x: number, y: number) => void;
@@ -125,6 +126,7 @@ export function CanvasRoot(props: CanvasRootProps) {
     selectedFrameId,
     transform,
     canvasRef,
+    exportLayerRef,
     addComponent,
     moveComponent,
     removeComponent,
@@ -582,6 +584,9 @@ export function CanvasRoot(props: CanvasRootProps) {
         );
       })()}
 
+      {/* Export layer — wraps viewport + connections so both are captured in PNG export */}
+      <div ref={exportLayerRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+
       {/* Placed components + frames layer */}
       <CanvasViewport
         transform={transform}
@@ -761,6 +766,8 @@ export function CanvasRoot(props: CanvasRootProps) {
           </svg>
         );
       })()}
+
+      </div>{/* end export layer */}
 
       {/* Drop zone visual indicator */}
       <CanvasDropZone isDragOver={isDragOver} />

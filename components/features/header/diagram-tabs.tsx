@@ -10,6 +10,7 @@ interface TabItem {
 interface DiagramTabsProps {
   tabs: TabItem[];
   activeTabId: string;
+  showNewTab: boolean;
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
   onRename: (id: string, name: string) => void;
@@ -18,7 +19,7 @@ interface DiagramTabsProps {
 }
 
 export function DiagramTabs(props: DiagramTabsProps): React.ReactElement {
-  const { tabs, activeTabId, onSelect, onClose, onRename, onReorder, onNewTab } = props;
+  const { tabs, activeTabId, showNewTab, onSelect, onClose, onRename, onReorder, onNewTab } = props;
 
   // Inline rename state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -174,8 +175,8 @@ export function DiagramTabs(props: DiagramTabsProps): React.ReactElement {
         );
       })}
 
-      {/* New tab button */}
-      <button
+      {/* New tab button — hidden on zero state */}
+      {showNewTab && <button
         type="button"
         aria-label="New diagram"
         onClick={onNewTab}
@@ -190,7 +191,7 @@ export function DiagramTabs(props: DiagramTabsProps): React.ReactElement {
           <line x1="6" y1="1" x2="6" y2="11" />
           <line x1="1" y1="6" x2="11" y2="6" />
         </svg>
-      </button>
+      </button>}
     </div>
   );
 }

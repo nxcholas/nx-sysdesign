@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
+import { parseDiagramBody } from '@/lib/diagram-schema';
 
 export async function GET() {
   const session = await auth();
@@ -31,20 +32,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => null) as {
-    name?: string;
-    components?: unknown;
-    connections?: unknown;
-    frames?: unknown;
-    viewport?: unknown;
-  } | null;
-
+  const body = await parseDiagramBody(req);
   if (!body) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
   const { name, components, connections, frames, viewport } = body;
-  const safeName = (typeof name === 'string' ? name.trim().slice(0, 256) : undefined) || 'Untitled Diagram 1';
+  const safeName = (name?.trim()) || 'Untitled Diagram 1';
 
   const userId = session.user.id;
 
@@ -61,12 +55,7 @@ export async function POST(req: Request) {
       data: {
         userId,
         name: safeName,
-        data: {
-          components: components ?? [],
-          connections: connections ?? [],
-          frames: frames ?? [],
-          viewport: viewport ?? { scale: 1, translateX: 0, translateY: 0 },
-        },
+        data: { components, connections, frames, viewport } as never,
       },
     });
   });

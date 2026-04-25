@@ -30,6 +30,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[][] = [
         { keys: ['F'], action: 'Frame tool' },
         { keys: ['T'], action: 'Text block tool' },
         { keys: ['U'], action: 'Shape tool' },
+        { keys: ['A'], action: 'Toggle data flow' },
       ],
     },
     {

@@ -174,6 +174,7 @@ export function CanvasRoot(props: CanvasRootProps) {
   const [activeShape, setActiveShape] = useState<ShapeKind | null>(null);
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [flowVisible, setFlowVisible] = useState(true);
 
   const { handleDragOver, handleDrop } = useDragDrop();
 
@@ -280,6 +281,12 @@ export function CanvasRoot(props: CanvasRootProps) {
       // ? — toggle shortcuts overlay (skip when typing)
       if (e.key === '?' && !inInput && !ctrl) {
         setShowShortcuts(prev => !prev);
+        return;
+      }
+
+      // A — toggle data flow animation
+      if ((e.key === 'a' || e.key === 'A') && !inInput && !ctrl) {
+        setFlowVisible(prev => !prev);
         return;
       }
 
@@ -529,7 +536,7 @@ export function CanvasRoot(props: CanvasRootProps) {
       })()}
 
       {/* Flow bubble layer — rendered BEFORE viewport so bubbles appear behind components */}
-      {connections.length > 0 && (() => {
+      {connections.length > 0 && flowVisible && (() => {
         const { scale, translateX, translateY } = transform;
         const toScreen = (pt: { x: number; y: number }) => ({
           x: pt.x * scale + translateX,
@@ -862,6 +869,8 @@ export function CanvasRoot(props: CanvasRootProps) {
         activeTool={activeTool}
         onToolChange={setActiveTool}
         onShapeSelect={setActiveShape}
+        flowVisible={flowVisible}
+        onFlowToggle={() => setFlowVisible(prev => !prev)}
       />
 
       {/* Empty state hint */}

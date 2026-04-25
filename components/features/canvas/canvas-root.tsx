@@ -34,6 +34,9 @@ import { ShapeGeometry } from './shape-renderer';
 import { ConnectionInspector } from '@/components/features/inspector/connection-inspector';
 import { TextBlockInspector } from '@/components/features/inspector/text-block-inspector';
 import { ShapeInspector } from '@/components/features/inspector/shape-inspector';
+import { ShortcutsOverlay } from './shortcuts-overlay';
+import { Tooltip } from '@/components/ui/tooltip';
+import { CircleHelp } from 'lucide-react';
 
 /** Serialize a PortSide to a stable string key for the highlightedPorts set. */
 function portKey(componentId: string, port: PortSide): string {
@@ -170,6 +173,7 @@ export function CanvasRoot(props: CanvasRootProps) {
 
   const [activeShape, setActiveShape] = useState<ShapeKind | null>(null);
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const { handleDragOver, handleDrop } = useDragDrop();
 
@@ -273,6 +277,12 @@ export function CanvasRoot(props: CanvasRootProps) {
 
       const ctrl = e.ctrlKey || e.metaKey;
 
+      // ? — toggle shortcuts overlay (skip when typing)
+      if (e.key === '?' && !inInput && !ctrl) {
+        setShowShortcuts(prev => !prev);
+        return;
+      }
+
       // Ctrl+Z — undo (allowed even when nothing is selected)
       if (ctrl && e.key === 'z' && !e.shiftKey) {
         if (inInput) return;
@@ -314,7 +324,7 @@ export function CanvasRoot(props: CanvasRootProps) {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selectedIds, selectedConnectionId, selectedFrameId, removeMany, removeConnection, removeFrame, undo, clipboardCopy, clipboardPaste]);
+  }, [selectedIds, selectedConnectionId, selectedFrameId, removeMany, removeConnection, removeFrame, undo, clipboardCopy, clipboardPaste, showShortcuts]);
 
   const onDragEnter = useCallback(() => setIsDragOver(true), []);
   const onDragLeave = useCallback((e: React.DragEvent) => {
@@ -748,8 +758,22 @@ export function CanvasRoot(props: CanvasRootProps) {
       {/* Drop zone visual indicator */}
       <CanvasDropZone isDragOver={isDragOver} />
 
-      {/* Zoom controls */}
+      {/* Zoom controls + shortcuts trigger */}
       <div className="absolute bottom-4 right-4 flex items-center gap-1 z-10">
+        <Tooltip content="Keyboard shortcuts (?)">
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => setShowShortcuts(true)}
+            className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 bg-panel-bg
+              border border-panel-border hover:text-gray-200 hover:border-gray-600
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
+              transition-colors cursor-pointer"
+            aria-label="Show keyboard shortcuts"
+          >
+            <CircleHelp size={14} />
+          </button>
+        </Tooltip>
         <button
           type="button"
           onPointerDown={(e) => e.stopPropagation()}
@@ -848,6 +872,9 @@ export function CanvasRoot(props: CanvasRootProps) {
           </p>
         </div>
       )}
+
+      {/* Keyboard shortcuts overlay */}
+      <ShortcutsOverlay open={showShortcuts} onClose={() => setShowShortcuts(false)} />
     </main>
   );
 }

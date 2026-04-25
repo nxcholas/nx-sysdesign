@@ -18,6 +18,7 @@ import type { DiagramTemplate } from '@/lib/templates/index';
 
 export default function Page() {
   const canvasRef = useRef<HTMLDivElement>(null);
+  const exportLayerRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
   const { data: session, update: updateSession } = useSession();
 
@@ -166,6 +167,11 @@ export default function Page() {
         onManualSave={diagrams.manualSave}
         onBeforeSignOut={diagrams.manualSave}
         onUpgrade={() => setUpgradeOpen(true)}
+        exportLayerRef={exportLayerRef}
+        placedComponents={canvasHook.placedComponents}
+        frames={canvasHook.frames}
+        activeDiagramName={diagrams.diagrams.find(d => d.id === diagrams.activeDiagramId)?.name ?? 'diagram'}
+        transform={canvasTransformHook.transform}
       />
       <div className="flex flex-1 overflow-hidden">
         {diagrams.diagrams.length > 0 && <SidePanel />}
@@ -214,6 +220,7 @@ export default function Page() {
           updateShapeKind={canvasHook.updateShapeKind}
           transform={canvasTransformHook.transform}
           canvasRef={canvasRef}
+          exportLayerRef={exportLayerRef}
           didPanRef={canvasTransformHook.didPanRef}
           spaceHeldRef={canvasTransformHook.spaceHeldRef}
           ctrlHeldRef={canvasTransformHook.ctrlHeldRef}

@@ -8,9 +8,10 @@ import { AccountModal } from './account-modal';
 
 interface HeaderActionsProps {
   onUpgrade?: () => void;
+  onBeforeSignOut: () => void;
 }
 
-export function HeaderActions({ onUpgrade }: HeaderActionsProps) {
+export function HeaderActions({ onUpgrade, onBeforeSignOut }: HeaderActionsProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
@@ -72,7 +73,7 @@ export function HeaderActions({ onUpgrade }: HeaderActionsProps) {
         {/* Sign out */}
         <button
           type="button"
-          onClick={() => { clearCurrentNamespace(); signOut({ callbackUrl: '/sign-in' }); }}
+          onClick={() => { onBeforeSignOut(); clearCurrentNamespace(); signOut({ callbackUrl: '/sign-in' }); }}
           className="text-xs text-gray-400 hover:text-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
         >
           Sign out
@@ -83,6 +84,7 @@ export function HeaderActions({ onUpgrade }: HeaderActionsProps) {
         <AccountModal
           onClose={() => setModalOpen(false)}
           onUpgrade={() => { setModalOpen(false); onUpgrade?.(); }}
+          onBeforeSignOut={onBeforeSignOut}
         />
       )}
     </>

@@ -18,8 +18,10 @@ interface HeaderProps {
   onRenameTab: (id: string, name: string) => void;
   onReorderTabs: (newOrder: string[]) => void;
   onNewTab: () => void;
+  showNewTab: boolean;
   onToggleSaveMode: (mode: SaveMode) => void;
   onManualSave: () => void;
+  onBeforeSignOut: () => void;
   onUpgrade?: () => void;
 }
 
@@ -34,8 +36,10 @@ export function Header(props: HeaderProps): React.ReactElement {
     onRenameTab,
     onReorderTabs,
     onNewTab,
+    showNewTab,
     onToggleSaveMode,
     onManualSave,
+    onBeforeSignOut,
     onUpgrade,
   } = props;
 
@@ -49,6 +53,7 @@ export function Header(props: HeaderProps): React.ReactElement {
       <DiagramTabs
         tabs={tabs}
         activeTabId={activeTabId}
+        showNewTab={showNewTab}
         onSelect={onSelectTab}
         onClose={onCloseTab}
         onRename={onRenameTab}
@@ -67,7 +72,7 @@ export function Header(props: HeaderProps): React.ReactElement {
       <Separator orientation="vertical" className="h-5 flex-shrink-0" />
 
       {/* Auth / header actions */}
-      <HeaderActions onUpgrade={onUpgrade} />
+      <HeaderActions onUpgrade={onUpgrade} onBeforeSignOut={onBeforeSignOut} />
     </header>
   );
 }

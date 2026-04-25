@@ -11,6 +11,10 @@ import { Header } from '@/components/features/header/header';
 import { SidePanel } from '@/components/features/side-panel/side-panel';
 import { CanvasRoot } from '@/components/features/canvas/canvas-root';
 import { UpgradeModal } from '@/components/features/billing/upgrade-modal';
+import { ZeroStateTemplates } from '@/components/features/canvas/zero-state-templates';
+import { NewDiagramModal } from '@/components/features/canvas/new-diagram-modal';
+import { DeleteDiagramModal } from '@/components/features/canvas/delete-diagram-modal';
+import type { DiagramTemplate } from '@/lib/templates/index';
 
 export default function Page() {
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -18,6 +22,8 @@ export default function Page() {
   const { data: session, update: updateSession } = useSession();
 
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState<boolean | null>(null);
   const sessionTierRef = useRef(session?.user?.tier);
   sessionTierRef.current = session?.user?.tier;
@@ -67,6 +73,25 @@ export default function Page() {
     setTransform: canvasTransformHook.setTransform,
     onUpgradeRequired,
   });
+
+  const { openNewDiagram, openFromTemplate } = diagrams;
+  const handleSelectTemplate = useCallback((template: DiagramTemplate) => {
+    setShowTemplateModal(false);
+    if (template.id === 'blank') {
+      openNewDiagram();
+    } else {
+      openFromTemplate(template.components, template.connections, template.frames);
+    }
+  }, [openNewDiagram, openFromTemplate]);
+
+  const { closeTab } = diagrams;
+  const handleCloseTab = useCallback((id: string) => {
+    if (diagrams.diagrams.length === 1) {
+      setDeleteConfirmId(id);
+    } else {
+      closeTab(id);
+    }
+  }, [diagrams.diagrams.length, closeTab]);
 
   const { notifyStateChanged } = diagrams;
   const onStateChange = useCallback(() => {
@@ -130,16 +155,25 @@ export default function Page() {
         saveMode={diagrams.saveMode}
         isDirty={diagrams.isDirty}
         onSelectTab={diagrams.switchToDiagram}
-        onCloseTab={diagrams.closeTab}
+        onCloseTab={handleCloseTab}
         onRenameTab={diagrams.renameDiagram}
         onReorderTabs={diagrams.reorderTabs}
-        onNewTab={diagrams.openNewDiagram}
+        onNewTab={() => setShowTemplateModal(true)}
+        showNewTab={diagrams.diagrams.length > 0}
         onToggleSaveMode={diagrams.setSaveMode}
         onManualSave={diagrams.manualSave}
+        onBeforeSignOut={diagrams.manualSave}
         onUpgrade={() => setUpgradeOpen(true)}
       />
       <div className="flex flex-1 overflow-hidden">
-        <SidePanel />
+        {diagrams.diagrams.length > 0 && <SidePanel />}
+        {diagrams.isLoading ? (
+          <div className="flex-1 bg-[#0d0f14] flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full border-2 border-gray-700 border-t-blue-500 animate-spin" aria-label="Loading diagrams" role="status" />
+          </div>
+        ) : diagrams.diagrams.length === 0 ? (
+          <ZeroStateTemplates onSelect={handleSelectTemplate} />
+        ) : (
         <CanvasRoot
           placedComponents={canvasHook.placedComponents}
           connections={canvasHook.connections}
@@ -191,8 +225,26 @@ export default function Page() {
           endDragHistory={canvasHook.endDragHistory}
           onStateChange={onStateChange}
         />
+        )}
       </div>
 
+      {showTemplateModal && (
+        <NewDiagramModal
+          onClose={() => setShowTemplateModal(false)}
+          onSelect={handleSelectTemplate}
+        />
+      )}
+      {deleteConfirmId && (
+        <DeleteDiagramModal
+          diagramName={diagrams.diagrams.find(d => d.id === deleteConfirmId)?.name ?? 'this diagram'}
+          onConfirm={() => {
+            const id = deleteConfirmId;
+            setDeleteConfirmId(null);
+            closeTab(id);
+          }}
+          onCancel={() => setDeleteConfirmId(null)}
+        />
+      )}
       {upgradeOpen && <UpgradeModal onClose={() => setUpgradeOpen(false)} onSuccess={handleUpgradeSuccess} />}
     </div>
   );

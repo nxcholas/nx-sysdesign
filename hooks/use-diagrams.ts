@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import type { CanvasState, CanvasTransform, DiagramSchema, SaveMode } from '@/lib/types';
+import type { CanvasState, CanvasTransform, DiagramSchema, Frame, PlacedComponent, Connection, SaveMode } from '@/lib/types';
 import {
   readAllDiagrams,
   readActiveDiagramId,
@@ -33,9 +33,11 @@ interface UseDiagramsReturn {
   openTabIds: string[];
   saveMode: SaveMode;
   isDirty: boolean;
+  isLoading: boolean;
   activeDiagram: DiagramSchema | null;
   switchToDiagram: (id: string) => void;
   openNewDiagram: () => void;
+  openFromTemplate: (components: PlacedComponent[], connections: Connection[], frames: Frame[]) => void;
   closeTab: (id: string) => void;
   renameDiagram: (id: string, name: string) => void;
   reorderTabs: (newOrder: string[]) => void;
@@ -55,6 +57,7 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
   const isAuthenticated = sessionStatus === 'authenticated';
 
   const [namespaceReady, setNamespaceReady] = useState(false);
+  const [isLoading, setIsLoadingState] = useState(true);
 
   const [diagrams, setDiagrams] = useState<DiagramSchema[]>([]);
   const [activeDiagramId, setActiveDiagramId] = useState<string>('');
@@ -159,57 +162,65 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
   useEffect(() => {
     if (!namespaceReady) return;
 
-    let allDiagrams = readAllDiagrams();
-    let activeDiagramIdVal = readActiveDiagramId();
-    let openTabIdsVal = readOpenTabIds();
+    const allDiagrams = readAllDiagrams();
+    const activeDiagramIdVal = readActiveDiagramId();
+    const openTabIdsVal = readOpenTabIds();
     const savedMode = readSaveMode();
 
-    // Ensure at least one diagram exists
-    if (allDiagrams.length === 0) {
-      const blank = createBlankDiagram(computeNextUntitledName([]));
-      writeDiagram(blank);
-      allDiagrams = [blank];
-      activeDiagramIdVal = blank.id;
-      openTabIdsVal = [blank.id];
-    }
-
-    const diagramIds = new Set(allDiagrams.map((d) => d.id));
-
-    // Repair openTabIds: filter to only IDs present in diagrams
-    const repairedTabs = openTabIdsVal.filter((id) => diagramIds.has(id));
-    // allDiagrams is guaranteed non-empty at this point
-    const firstDiagramId = allDiagrams[0]!.id;
-    const finalTabs = repairedTabs.length > 0 ? repairedTabs : [firstDiagramId];
-
-    // Validate activeDiagramId
-    const finalActiveId: string =
-      activeDiagramIdVal && diagramIds.has(activeDiagramIdVal)
-        ? activeDiagramIdVal
-        : (finalTabs[0] as string);
-
-    // Persist repaired state
-    writeActiveDiagramId(finalActiveId);
-    writeOpenTabIds(finalTabs);
-
-    // Set React state immediately from localStorage (fast path)
-    setDiagrams(allDiagrams);
-    setActiveDiagramId(finalActiveId);
-    setOpenTabIds(finalTabs);
     setSaveModeState(savedMode);
 
-    // Load the active diagram into the canvas
-    const activeDiagram = allDiagrams.find((d) => d.id === finalActiveId);
-    if (activeDiagram) {
-      isLoadingRef.current = true;
-      optionsRef.current.loadDiagram({
-        components: activeDiagram.components,
-        connections: activeDiagram.connections,
-        frames: activeDiagram.frames,
-      });
-      optionsRef.current.setTransform(activeDiagram.viewport);
-      setTimeout(() => {
-        isLoadingRef.current = false;
-      }, 0);
+    let finalTabs: string[] = [];
+    let finalActiveId = '';
+
+    if (allDiagrams.length === 0) {
+      setDiagrams([]);
+      setActiveDiagramId('');
+      setOpenTabIds([]);
+      // If authenticated, keep isLoading=true — the API fetch below will
+      // resolve whether the user truly has no diagrams or just signed out
+      // (which clears localStorage). Only resolve immediately for anonymous users.
+      if (!isAuthenticatedRef.current) {
+        setIsLoadingState(false);
+      }
+    } else {
+      const diagramIds = new Set(allDiagrams.map((d) => d.id));
+
+      // Repair openTabIds: filter to only IDs present in diagrams
+      const repairedTabs = openTabIdsVal.filter((id) => diagramIds.has(id));
+      const firstDiagramId = allDiagrams[0]!.id;
+      finalTabs = repairedTabs.length > 0 ? repairedTabs : [firstDiagramId];
+
+      // Validate activeDiagramId
+      finalActiveId =
+        activeDiagramIdVal && diagramIds.has(activeDiagramIdVal)
+          ? activeDiagramIdVal
+          : (finalTabs[0] as string);
+
+      // Persist repaired state
+      writeActiveDiagramId(finalActiveId);
+      writeOpenTabIds(finalTabs);
+
+      // Set React state immediately from localStorage (fast path)
+      setDiagrams(allDiagrams);
+      setActiveDiagramId(finalActiveId);
+      setOpenTabIds(finalTabs);
+
+      // Load the active diagram into the canvas
+      const activeDiagramData = allDiagrams.find((d) => d.id === finalActiveId);
+      if (activeDiagramData) {
+        isLoadingRef.current = true;
+        optionsRef.current.loadDiagram({
+          components: activeDiagramData.components,
+          connections: activeDiagramData.connections,
+          frames: activeDiagramData.frames,
+        });
+        optionsRef.current.setTransform(activeDiagramData.viewport);
+        setTimeout(() => {
+          isLoadingRef.current = false;
+        }, 0);
+      }
+
+      setIsLoadingState(false);
     }
 
     // After setting localStorage state, fetch from API and reconcile
@@ -220,13 +231,21 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
         return res.json() as Promise<DiagramSchema[]>;
       })
       .then((serverDiagrams) => {
-        if (!serverDiagrams) return; // 401 anonymous — keep localStorage as-is
+        if (!serverDiagrams) {
+          // 401 anonymous — keep localStorage as-is, unblock UI
+          setIsLoadingState(false);
+          return;
+        }
 
         if (serverDiagrams.length === 0) {
-          // Authenticated user with no diagrams on server yet (first sign-in).
-          // POST the current localStorage diagram so it gets a server cuid.
+          // Authenticated user with no diagrams on server yet (first sign-in or
+          // signed in after signing out with no prior data). Promote local diagram
+          // if one exists, otherwise unblock the zero-state.
           const localDiagram = diagramsRef.current[0];
-          if (!localDiagram) return;
+          if (!localDiagram) {
+            setIsLoadingState(false);
+            return;
+          }
           fetch('/api/diagrams', {
             method: 'POST',
             headers: JSON_HEADERS,
@@ -234,7 +253,7 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
           })
             .then((res) => (res.ok ? (res.json() as Promise<DiagramSchema>) : null))
             .then((created) => {
-              if (!created) return;
+              if (!created) { setIsLoadingState(false); return; }
               const canonical: DiagramSchema = { ...localDiagram, id: created.id };
               activeDiagramIdRef.current = canonical.id;
               writeAllDiagrams([canonical]);
@@ -243,9 +262,11 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
               setDiagrams([canonical]);
               setActiveDiagramId(canonical.id);
               setOpenTabIds([canonical.id]);
+              setIsLoadingState(false);
             })
             .catch((err) => {
               console.error('[useDiagrams] first-login POST error:', err);
+              setIsLoadingState(false);
             });
           return;
         }
@@ -253,13 +274,13 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
         // Overwrite in-memory state with server list
         writeAllDiagrams(serverDiagrams);
         setDiagrams(serverDiagrams);
+        setIsLoadingState(false);
 
         // Persist valid open tabs from server diagrams
         const serverIds = new Set(serverDiagrams.map((d) => d.id));
         const validTabs = finalTabs.filter((id) => serverIds.has(id));
-        const serverFirstId = serverDiagrams[0]!.id;
-        const reconciledTabs = validTabs.length > 0 ? validTabs : [serverFirstId];
-        const reconciledActiveId = serverIds.has(finalActiveId)
+        const reconciledTabs = validTabs.length > 0 ? validTabs : serverDiagrams.map((d) => d.id);
+        const reconciledActiveId = finalActiveId && serverIds.has(finalActiveId)
           ? finalActiveId
           : (reconciledTabs[0] as string);
 
@@ -292,6 +313,7 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
       })
       .catch((err) => {
         console.error('[useDiagrams] initial fetch error:', err);
+        setIsLoadingState(false);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [namespaceReady]); // runs once when namespace is confirmed (flips from false → true exactly once)
@@ -412,6 +434,79 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
     setIsDirty(false);
   }, [performSave]);
 
+  // --- openFromTemplate ---
+
+  const openFromTemplate = useCallback(
+    (components: PlacedComponent[], connections: Connection[], frames: Frame[]) => {
+      if (activeDiagramIdRef.current) performSave();
+
+      const name = computeNextUntitledName(diagramsRef.current);
+      const newDiagram: DiagramSchema = {
+        ...createBlankDiagram(name),
+        components,
+        connections,
+        frames,
+      };
+
+      if (isAuthenticatedRef.current) {
+        fetch('/api/diagrams', {
+          method: 'POST',
+          headers: JSON_HEADERS,
+          body: JSON.stringify(newDiagram),
+        })
+          .then(async (res) => {
+            if (res.status === 403) { optionsRef.current.onUpgradeRequired?.(); return; }
+            const serverDiagram: DiagramSchema | null = res.ok
+              ? (await res.json() as DiagramSchema)
+              : null;
+            // On non-403 failure fall back to localStorage-only so the user
+            // isn't stranded on the zero-state with no feedback.
+            const canonical: DiagramSchema = serverDiagram
+              ? { ...newDiagram, id: serverDiagram.id }
+              : newDiagram;
+            writeDiagram(canonical);
+            setDiagrams((prev) => [...prev, canonical]);
+            setOpenTabIds((prev) => { const updated = [...prev, canonical.id]; writeOpenTabIds(updated); return updated; });
+            isLoadingRef.current = true;
+            optionsRef.current.loadDiagram({ components: canonical.components, connections: canonical.connections, frames: canonical.frames });
+            optionsRef.current.setTransform(canonical.viewport);
+            setTimeout(() => { isLoadingRef.current = false; }, 0);
+            setActiveDiagramId(canonical.id);
+            writeActiveDiagramId(canonical.id);
+            setIsDirty(false);
+          })
+          .catch((err) => {
+            console.error('[useDiagrams] openFromTemplate API error:', err);
+            // Network failure — open locally so the user isn't stuck
+            writeDiagram(newDiagram);
+            setDiagrams((prev) => [...prev, newDiagram]);
+            setOpenTabIds((prev) => { const updated = [...prev, newDiagram.id]; writeOpenTabIds(updated); return updated; });
+            isLoadingRef.current = true;
+            optionsRef.current.loadDiagram({ components: newDiagram.components, connections: newDiagram.connections, frames: newDiagram.frames });
+            optionsRef.current.setTransform(newDiagram.viewport);
+            setTimeout(() => { isLoadingRef.current = false; }, 0);
+            setActiveDiagramId(newDiagram.id);
+            writeActiveDiagramId(newDiagram.id);
+            setIsDirty(false);
+          });
+        return;
+      }
+
+      // Anonymous path
+      writeDiagram(newDiagram);
+      setDiagrams((prev) => [...prev, newDiagram]);
+      setOpenTabIds((prev) => { const updated = [...prev, newDiagram.id]; writeOpenTabIds(updated); return updated; });
+      isLoadingRef.current = true;
+      optionsRef.current.loadDiagram({ components: newDiagram.components, connections: newDiagram.connections, frames: newDiagram.frames });
+      optionsRef.current.setTransform(newDiagram.viewport);
+      setTimeout(() => { isLoadingRef.current = false; }, 0);
+      setActiveDiagramId(newDiagram.id);
+      writeActiveDiagramId(newDiagram.id);
+      setIsDirty(false);
+    },
+    [performSave]
+  );
+
   // --- closeTab ---
 
   const closeTab = useCallback(
@@ -422,14 +517,8 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
       const currentTabs = openTabIdsRef.current;
       const currentActiveId = activeDiagramIdRef.current;
 
-      // If this is the only diagram, confirm and replace with blank
+      // If this is the only diagram, delete it and return to zero-state
       if (currentDiagrams.length === 1) {
-        const diagramName = currentDiagrams.find((d) => d.id === id)?.name ?? 'this diagram';
-        const confirmed = window.confirm(
-          `Delete diagram "${diagramName}"? This cannot be undone.`
-        );
-        if (!confirmed) return;
-
         deleteDiagram(id);
         if (isAuthenticatedRef.current) {
           fetch(`/api/diagrams/${id}`, { method: 'DELETE' }).catch((err) => {
@@ -437,21 +526,9 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
           });
         }
 
-        const name = computeNextUntitledName([]);
-        const blank = createBlankDiagram(name);
-        writeDiagram(blank);
-
-        setDiagrams([blank]);
-        setOpenTabIds([blank.id]);
-        setActiveDiagramId(blank.id);
-        writeActiveDiagramId(blank.id);
-        writeOpenTabIds([blank.id]);
-
-        isLoadingRef.current = true;
-        optionsRef.current.loadDiagram({ components: [], connections: [], frames: [] });
-        optionsRef.current.setTransform(blank.viewport);
-        setTimeout(() => { isLoadingRef.current = false; }, 0);
-
+        setDiagrams([]);
+        setOpenTabIds([]);
+        setActiveDiagramId('');
         setIsDirty(false);
         return;
       }
@@ -584,9 +661,11 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
     openTabIds,
     saveMode,
     isDirty,
+    isLoading,
     activeDiagram,
     switchToDiagram,
     openNewDiagram,
+    openFromTemplate,
     closeTab,
     renameDiagram,
     reorderTabs,

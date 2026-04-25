@@ -8,6 +8,7 @@ import { clearCurrentNamespace } from "@/lib/diagram-storage";
 interface AccountModalProps {
   onClose: () => void;
   onUpgrade: () => void;
+  onBeforeSignOut: () => void;
 }
 
 interface SubscriptionData {
@@ -30,7 +31,7 @@ function statusLabel(status: string) {
   }
 }
 
-export function AccountModal({ onClose, onUpgrade }: AccountModalProps) {
+export function AccountModal({ onClose, onUpgrade, onBeforeSignOut }: AccountModalProps) {
   const { data: session, update: updateSession } = useSession();
   const user = session?.user;
   const isPro = user?.tier === "pro";
@@ -300,6 +301,7 @@ export function AccountModal({ onClose, onUpgrade }: AccountModalProps) {
             <button
               type="button"
               onClick={() => {
+                onBeforeSignOut();
                 clearCurrentNamespace();
                 signOut({ callbackUrl: "/sign-in" });
               }}

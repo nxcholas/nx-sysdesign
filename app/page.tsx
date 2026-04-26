@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { auth } from '@/auth';
 import { LandingNav } from '@/components/features/landing/landing-nav';
 import { LandingHero } from '@/components/features/landing/landing-hero';
 import { StatsBar } from '@/components/features/landing/stats-bar';
@@ -31,7 +33,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const session = await auth();
+  if (session) redirect('/app');
+
   return (
     <div id="top">
       <a

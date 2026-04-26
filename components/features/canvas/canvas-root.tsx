@@ -585,7 +585,7 @@ export function CanvasRoot(props: CanvasRootProps) {
       })()}
 
       {/* Export layer — wraps viewport + connections so both are captured in PNG export */}
-      <div ref={exportLayerRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+      <div ref={exportLayerRef} style={{ position: 'absolute', inset: 0 }}>
 
       {/* Placed components + frames layer */}
       <CanvasViewport

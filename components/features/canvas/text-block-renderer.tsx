@@ -67,10 +67,15 @@ export function TextBlockRenderer({ component, isSelected, autoFocus, onTextChan
   };
 
   const textStyle = applyTextStyle(component.textStyle);
+  const verticalAlign = component.textStyle?.verticalAlign ?? 'middle';
+  const verticalAlignClass =
+    verticalAlign === 'middle' ? 'justify-center' :
+    verticalAlign === 'bottom' ? 'justify-end' :
+    'justify-start';
 
   return (
     <div
-      className={`w-full h-full relative rounded ${
+      className={`w-full h-full flex flex-col ${verticalAlignClass} rounded p-1 ${
         isSelected ? 'ring-1 ring-dashed ring-blue-400' : ''
       }`}
       onDoubleClick={(e) => {
@@ -87,15 +92,12 @@ export function TextBlockRenderer({ component, isSelected, autoFocus, onTextChan
           onKeyDown={handleKeyDown}
           onPointerDown={(e) => { onSelect?.(); e.stopPropagation(); }}
           onClick={(e) => e.stopPropagation()}
-          className="absolute inset-0 w-full h-full resize-none bg-transparent outline-none p-1"
+          className="w-full flex-1 resize-none bg-transparent outline-none"
           style={{ ...textStyle, resize: 'none' }}
           placeholder="Type here…"
         />
       ) : (
-        <div
-          className="absolute inset-0 p-1 whitespace-pre-wrap break-words"
-          style={textStyle}
-        >
+        <div className="w-full whitespace-pre-wrap break-words" style={textStyle}>
           {component.text || (
             <span className="text-gray-600 select-none">Double-click to edit</span>
           )}

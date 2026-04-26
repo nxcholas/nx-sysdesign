@@ -85,14 +85,16 @@ function ComponentVisual({
   }
   if (kind.type === 'text-block') {
     return (
-      <TextBlockRenderer
-        component={component}
-        isSelected={isSelected}
-        autoFocus={autoFocus}
-        onTextChange={onTextChange}
-        onSelect={onSelect}
-        onResize={onResize}
-      />
+      <div className="absolute inset-0">
+        <TextBlockRenderer
+          component={component}
+          isSelected={isSelected}
+          autoFocus={autoFocus}
+          onTextChange={onTextChange}
+          onSelect={onSelect}
+          onResize={onResize}
+        />
+      </div>
     );
   }
   if (kind.type === 'shape') {

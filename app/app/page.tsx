@@ -214,6 +214,7 @@ export default function Page() {
           renameTableRow={canvasHook.renameTableRow}
           cycleTableKey={canvasHook.cycleTableKey}
           updateConnectionCardinality={canvasHook.updateConnectionCardinality}
+          updateConnectionLabel={canvasHook.updateConnectionLabel}
           updateText={canvasHook.updateText}
           updateTextStyle={canvasHook.updateTextStyle}
           updateShapeStyle={canvasHook.updateShapeStyle}

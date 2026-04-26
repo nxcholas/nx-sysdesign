@@ -5,6 +5,7 @@ import type { Connection, Cardinality, CardinalityEnd } from '@/lib/types';
 interface ConnectionInspectorProps {
   connection: Connection | null;
   onUpdateCardinality: (id: string, cardinality: Cardinality) => void;
+  onUpdateLabel: (id: string, label: string) => void;
   onRemove: (id: string) => void;
 }
 
@@ -30,6 +31,7 @@ function keyToEnd(key: string): CardinalityEnd {
 export function ConnectionInspector({
   connection,
   onUpdateCardinality,
+  onUpdateLabel,
   onRemove,
 }: ConnectionInspectorProps) {
   if (!connection) return null;
@@ -57,6 +59,32 @@ export function ConnectionInspector({
         >
           Remove
         </button>
+      </div>
+
+      {/* Label */}
+      <div className="flex flex-col gap-1">
+        <label className="text-xs text-gray-400" htmlFor="connection-label">
+          Label
+        </label>
+        <input
+          id="connection-label"
+          type="text"
+          defaultValue={connection.label ?? ''}
+          key={connection.id}
+          placeholder="e.g. HTTP/REST"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              onUpdateLabel(connection.id, (e.target as HTMLInputElement).value.trim());
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
+          onBlur={(e) => {
+            onUpdateLabel(connection.id, e.target.value.trim());
+          }}
+          className="bg-[#1a1d24] border border-panel-border text-gray-200 text-xs rounded px-2 py-1
+            placeholder-gray-600
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        />
       </div>
 
       {hasCardinality && connection.cardinality ? (

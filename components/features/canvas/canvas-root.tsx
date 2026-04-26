@@ -103,6 +103,7 @@ export interface CanvasRootProps {
   renameTableRow: (id: string, rowId: string, name: string) => void;
   cycleTableKey: (id: string, rowId: string) => void;
   updateConnectionCardinality: (id: string, cardinality: Cardinality) => void;
+  updateConnectionLabel: (id: string, label: string) => void;
   updateText: (id: string, text: string) => void;
   updateTextStyle: (id: string, style: Partial<TextStyle>) => void;
   updateShapeStyle: (id: string, style: Partial<ShapeStyle>) => void;
@@ -152,6 +153,7 @@ export function CanvasRoot(props: CanvasRootProps) {
     renameTableRow,
     cycleTableKey,
     updateConnectionCardinality,
+    updateConnectionLabel,
     updateText,
     updateTextStyle,
     updateShapeStyle,
@@ -177,6 +179,7 @@ export function CanvasRoot(props: CanvasRootProps) {
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [flowVisible, setFlowVisible] = useState(true);
+  const [labelEditingId, setLabelEditingId] = useState<string | null>(null);
 
   const { handleDragOver, handleDrop } = useDragDrop();
 
@@ -504,6 +507,7 @@ export function CanvasRoot(props: CanvasRootProps) {
           <ConnectionInspector
             connection={conn}
             onUpdateCardinality={updateConnectionCardinality}
+            onUpdateLabel={updateConnectionLabel}
             onRemove={removeConnection}
           />
         );
@@ -675,6 +679,12 @@ export function CanvasRoot(props: CanvasRootProps) {
               const isConnSelected = conn.id === selectedConnectionId;
               const strokeColor = isConnSelected ? '#3b82f6' : '#6b7280';
 
+              // Midpoint of screenPoints for label placement
+              const midIdx = Math.floor(screenPoints.length / 2);
+              const midPt = screenPoints.length % 2 === 1
+                ? screenPoints[midIdx]!
+                : { x: (screenPoints[midIdx - 1]!.x + screenPoints[midIdx]!.x) / 2, y: (screenPoints[midIdx - 1]!.y + screenPoints[midIdx]!.y) / 2 };
+
               // Cardinality glyphs (only when both ports are row ports with cardinality set)
               const cardinalityGlyphs: React.ReactNode[] = [];
               if (conn.cardinality && screenPoints.length >= 2) {
@@ -710,9 +720,18 @@ export function CanvasRoot(props: CanvasRootProps) {
                 }
               }
 
+              const isEditingLabel = labelEditingId === conn.id;
+              const PILL_PX = 8;
+              const PILL_PY = 4;
+              const FONT_SIZE = 11;
+              // Approximate text width for pill sizing (7px per char at 11px font)
+              const labelCharWidth = (conn.label?.length ?? 0) * 7;
+              const pillW = Math.max(labelCharWidth + PILL_PX * 2, 36);
+              const pillH = FONT_SIZE + PILL_PY * 2;
+
               return (
                 <g key={conn.id}>
-                  {/* Invisible wide hit area for click detection — trimmed near ports */}
+                  {/* Invisible wide hit area for click/double-click — trimmed near ports */}
                   <path
                     d={hitPathD}
                     fill="none"
@@ -724,6 +743,11 @@ export function CanvasRoot(props: CanvasRootProps) {
                     onClick={(e) => {
                       e.stopPropagation();
                       selectConnection(conn.id);
+                    }}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      selectConnection(conn.id);
+                      setLabelEditingId(conn.id);
                     }}
                   />
                   {/* Visible connection line */}
@@ -737,6 +761,78 @@ export function CanvasRoot(props: CanvasRootProps) {
                   />
                   {/* Cardinality glyphs */}
                   {cardinalityGlyphs}
+                  {/* Label pill — shown when label is set and not currently editing */}
+                  {conn.label && !isEditingLabel && (
+                    <g style={{ pointerEvents: 'none' }}>
+                      <rect
+                        x={midPt.x - pillW / 2}
+                        y={midPt.y - pillH / 2}
+                        width={pillW}
+                        height={pillH}
+                        rx={4}
+                        fill="#1e2028"
+                        stroke="#374151"
+                        strokeWidth={1}
+                      />
+                      <text
+                        x={midPt.x}
+                        y={midPt.y}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fontSize={FONT_SIZE}
+                        fontFamily="Inter, ui-sans-serif, system-ui, sans-serif"
+                        fill="#e5e7eb"
+                      >
+                        {conn.label}
+                      </text>
+                    </g>
+                  )}
+                  {/* Inline label input — shown when editing */}
+                  {isEditingLabel && (
+                    <foreignObject
+                      x={midPt.x - 100}
+                      y={midPt.y - 14}
+                      width={200}
+                      height={28}
+                      style={{ overflow: 'visible' }}
+                    >
+                      <input
+                        // @ts-expect-error xmlns required for SVG foreignObject
+                        xmlns="http://www.w3.org/1999/xhtml"
+                        type="text"
+                        autoFocus
+                        defaultValue={conn.label ?? ''}
+                        placeholder="Label…"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            updateConnectionLabel(conn.id, (e.target as HTMLInputElement).value.trim());
+                            setLabelEditingId(null);
+                          } else if (e.key === 'Escape') {
+                            setLabelEditingId(null);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          updateConnectionLabel(conn.id, e.target.value.trim());
+                          setLabelEditingId(null);
+                        }}
+                        style={{
+                          width: '200px',
+                          height: '28px',
+                          background: '#1e2028',
+                          color: '#e5e7eb',
+                          border: '1px solid #3b82f6',
+                          borderRadius: '4px',
+                          outline: 'none',
+                          padding: '0 8px',
+                          fontSize: '11px',
+                          fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+                          textAlign: 'center',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </foreignObject>
+                  )}
                 </g>
               );
             })}

@@ -165,6 +165,7 @@ export interface Connection {
   targetId: string;
   targetPort: PortSide;
   cardinality?: Cardinality;
+  label?: string;
 }
 
 // --- Canvas Reducer ---
@@ -195,6 +196,7 @@ export type CanvasAction =
   | { type: 'RENAME_TABLE_ROW'; id: string; rowId: string; name: string }
   | { type: 'CYCLE_TABLE_KEY'; id: string; rowId: string }
   | { type: 'UPDATE_CONNECTION_CARDINALITY'; id: string; cardinality: Cardinality }
+  | { type: 'UPDATE_CONNECTION_LABEL'; id: string; label: string }
   | { type: 'UPDATE_TEXT'; id: string; text: string }
   | { type: 'UPDATE_TEXT_STYLE'; id: string; style: Partial<TextStyle> }
   | { type: 'UPDATE_SHAPE_STYLE'; id: string; style: Partial<ShapeStyle> }

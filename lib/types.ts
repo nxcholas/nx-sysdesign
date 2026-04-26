@@ -47,6 +47,13 @@ export interface PaletteSection {
 
 export type CanvasTool = 'select' | 'pan' | 'frame' | 'text-block' | 'shape';
 
+// --- Alignment Types ---
+
+export type AlignmentDirection =
+  | 'left' | 'right' | 'center-h'
+  | 'top' | 'bottom' | 'center-v'
+  | 'distribute-h' | 'distribute-v';
+
 export interface SelectionRect {
   startX: number;
   startY: number;
@@ -70,6 +77,7 @@ export interface TextStyle {
   strikethrough: boolean;
   color: string;
   align: 'left' | 'center' | 'right';
+  verticalAlign: 'top' | 'middle' | 'bottom';
 }
 
 // --- Canvas Types ---
@@ -203,7 +211,8 @@ export type CanvasAction =
   | { type: 'UPDATE_SHAPE_KIND'; id: string; shape: ShapeKind }
   | { type: 'LOAD_DIAGRAM'; payload: Pick<DiagramSchema, 'components' | 'connections' | 'frames'> }
   | { type: 'PASTE'; components: PlacedComponent[]; connections: Connection[] }
-  | { type: 'RESTORE_STATE'; state: CanvasState };
+  | { type: 'RESTORE_STATE'; state: CanvasState }
+  | { type: 'ALIGN_COMPONENTS'; ids: string[]; direction: AlignmentDirection };
 
 export interface CanvasState {
   placedComponents: PlacedComponent[];

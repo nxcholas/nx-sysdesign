@@ -15,6 +15,12 @@ const ALIGN_OPTIONS: { value: TextStyle['align'] }[] = [
   { value: 'right'  },
 ];
 
+const VERTICAL_ALIGN_OPTIONS: { value: TextStyle['verticalAlign'] }[] = [
+  { value: 'top'    },
+  { value: 'middle' },
+  { value: 'bottom' },
+];
+
 export function TextStyleControls({ style, onChange }: TextStyleControlsProps) {
   const inputBase =
     'bg-[#1a1d24] border border-panel-border text-gray-200 text-xs rounded px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500';
@@ -82,7 +88,7 @@ export function TextStyleControls({ style, onChange }: TextStyleControlsProps) {
         </div>
       </div>
 
-      {/* Alignment */}
+      {/* Horizontal Alignment */}
       <div className="flex flex-col gap-1">
         <label className="text-xs text-gray-400">Align</label>
         <div className="flex gap-1">
@@ -112,6 +118,43 @@ export function TextStyleControls({ style, onChange }: TextStyleControlsProps) {
                   <rect x="0" y="0" width="14" height="2" rx="1" />
                   <rect x="4" y="5" width="10" height="2" rx="1" />
                   <rect x="2" y="10" width="12" height="2" rx="1" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Vertical Alignment */}
+      <div className="flex flex-col gap-1">
+        <label className="text-xs text-gray-400">Vertical align</label>
+        <div className="flex gap-1">
+          {VERTICAL_ALIGN_OPTIONS.map(({ value }) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={(style.verticalAlign ?? 'middle') === value}
+              title={value.charAt(0).toUpperCase() + value.slice(1)}
+              onClick={() => onChange({ verticalAlign: value })}
+              className={`${toggleBase} flex-1 ${(style.verticalAlign ?? 'middle') === value ? toggleActive : toggleInactive}`}
+            >
+              {value === 'top' ? (
+                <svg width={12} height={14} viewBox="0 0 12 14" fill="currentColor">
+                  <rect x="0" y="0" width="12" height="2" rx="1" />
+                  <rect x="1" y="4" width="10" height="2" rx="1" />
+                  <rect x="3" y="8" width="6" height="2" rx="1" />
+                </svg>
+              ) : value === 'middle' ? (
+                <svg width={12} height={14} viewBox="0 0 12 14" fill="currentColor">
+                  <rect x="1" y="1" width="10" height="2" rx="1" />
+                  <rect x="0" y="6" width="12" height="2" rx="1" />
+                  <rect x="1" y="11" width="10" height="2" rx="1" />
+                </svg>
+              ) : (
+                <svg width={12} height={14} viewBox="0 0 12 14" fill="currentColor">
+                  <rect x="3" y="2" width="6" height="2" rx="1" />
+                  <rect x="1" y="6" width="10" height="2" rx="1" />
+                  <rect x="0" y="10" width="12" height="2" rx="1" />
                 </svg>
               )}
             </button>

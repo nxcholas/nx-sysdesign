@@ -104,13 +104,14 @@ export const DEFAULT_SHAPE_STYLE: ShapeStyle = {
 };
 
 export const DEFAULT_TEXT_STYLE: TextStyle = {
-  fontSize: 32,
+  fontSize: 24,
   bold: false,
   italic: false,
   underline: false,
   strikethrough: false,
   color: '#e5e7eb',
   align: 'center',
+  verticalAlign: 'middle',
 };
 
 export const DEFAULT_SHAPE_TEXT_STYLE: TextStyle = {
@@ -121,6 +122,7 @@ export const DEFAULT_SHAPE_TEXT_STYLE: TextStyle = {
   strikethrough: false,
   color: '#e5e7eb',
   align: 'center',
+  verticalAlign: 'middle',
 };
 
 // --- Badge Dimensions (HTTP methods + status codes) ---

@@ -33,7 +33,8 @@ export default function AppleIcon() {
                 width: 40,
                 height: 40,
                 borderRadius: 8,
-                background: 'white',
+                border: '4px solid white',
+                background: 'transparent',
               }}
             />
           ))}

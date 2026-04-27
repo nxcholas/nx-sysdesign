@@ -1,0 +1,21 @@
+{
+  "name": "NX-Design",
+  "short_name": "NX-Design",
+  "description": "Drag-and-drop system design canvas with 100+ components, ERD tables, and live animated data-flow connections.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/icon",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-icon",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

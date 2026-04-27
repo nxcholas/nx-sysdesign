@@ -33,7 +33,8 @@ export default function Icon() {
                 width: 7,
                 height: 7,
                 borderRadius: 1.5,
-                background: 'white',
+                border: '1.5px solid white',
+                background: 'transparent',
               }}
             />
           ))}

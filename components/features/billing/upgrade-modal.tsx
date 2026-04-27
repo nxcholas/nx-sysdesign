@@ -23,11 +23,10 @@ export function UpgradeModal({ onClose }: UpgradeModalProps) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ priceId }),
     });
-    const data = await res.json() as { url?: string; error?: string; detail?: string };
+    const data = await res.json() as { url?: string };
     if (data.url) {
       window.location.href = data.url;
     } else {
-      console.error('[checkout] failed:', data.error, data.detail);
       setLoading(false);
     }
   }

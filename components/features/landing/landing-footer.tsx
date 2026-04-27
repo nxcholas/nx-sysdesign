@@ -7,10 +7,10 @@ import { BrandLockup } from '@/components/ui/brand-lockup';
 import { fadeIn, viewportOnce } from '@/lib/motion';
 
 const productLinks = [
-  { href: '#features', label: 'Features' },
-  { href: '#how-it-works', label: 'How it works' },
-  { href: '#pricing', label: 'Pricing' },
-  { href: '#faq', label: 'FAQ' },
+  { href: '/#features', label: 'Features' },
+  { href: '/#how-it-works', label: 'How it works' },
+  { href: '/#pricing', label: 'Pricing' },
+  { href: '/#faq', label: 'FAQ' },
   { href: '/changelog', label: 'Changelog' },
 ];
 
@@ -50,20 +50,17 @@ export function LandingFooter(): React.ReactElement {
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider font-mono mb-1">
               Product
             </h3>
-            {productLinks.map((link) => {
-              const footerLinkClass = `text-sm text-gray-500 hover:text-gray-300 transition-colors
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded
-                w-fit`;
-              return link.href.startsWith('#') ? (
-                <a key={link.href} href={link.href} className={footerLinkClass}>
-                  {link.label}
-                </a>
-              ) : (
-                <Link key={link.href} href={link.href} className={footerLinkClass}>
-                  {link.label}
-                </Link>
-              );
-            })}
+            {productLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-sm text-gray-500 hover:text-gray-300 transition-colors
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded
+                  w-fit"
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
 
           {/* App links */}

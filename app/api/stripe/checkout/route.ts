@@ -20,10 +20,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const ALLOWED_PRICE_IDS = new Set([
-    process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
-    process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
-  ]);
+  const MONTHLY_PRICE_ID = process.env.STRIPE_PRO_MONTHLY_PRICE_ID;
+  const ANNUAL_PRICE_ID = process.env.STRIPE_PRO_ANNUAL_PRICE_ID;
+  const ALLOWED_PRICE_IDS = new Set([MONTHLY_PRICE_ID, ANNUAL_PRICE_ID]);
 
   const body = await req.json().catch(() => null) as { priceId?: string } | null;
   const priceId = body?.priceId;
@@ -55,14 +54,18 @@ export async function POST(req: Request) {
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
       : 'http://localhost:3000');
 
+  const interval = priceId === MONTHLY_PRICE_ID ? 'monthly' : 'yearly';
+  const successUrl = `${origin}/canvas?checkout=success&interval=${interval}`;
+  const cancelUrl = `${origin}/canvas`;
+
   let checkoutSession;
   try {
     checkoutSession = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       line_items: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
-      success_url: `${origin}/app?checkout=success`,
-      cancel_url: `${origin}/app`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
     });
   } catch (err) {
     // If the stored customer ID is stale (e.g. from test mode), delete it and retry once with a fresh customer.
@@ -75,8 +78,8 @@ export async function POST(req: Request) {
           customer: stripeCustomerId,
           line_items: [{ price: priceId, quantity: 1 }],
           mode: 'subscription',
-          success_url: `${origin}/app?checkout=success`,
-          cancel_url: `${origin}/app`,
+          success_url: successUrl,
+          cancel_url: cancelUrl,
         });
       } catch (retryErr) {
         console.error('[stripe/checkout] retry after stale customer failed:', retryErr);

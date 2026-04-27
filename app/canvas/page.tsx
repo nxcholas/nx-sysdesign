@@ -4,6 +4,7 @@ import { useRef, useCallback, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { track } from '@vercel/analytics';
 import { usePlacedComponents } from '@/hooks/use-placed-components';
 import { useCanvas } from '@/hooks/use-canvas';
 import { useDiagrams } from '@/hooks/use-diagrams';
@@ -37,9 +38,14 @@ export default function Page() {
   // Detect return from Stripe hosted checkout and start polling
   useEffect(() => {
     if (searchParams.get('checkout') !== 'success') return;
+    const billingInterval = searchParams.get('interval');
     const url = new URL(window.location.href);
     url.searchParams.delete('checkout');
+    url.searchParams.delete('interval');
     window.history.replaceState({}, '', url.toString());
+
+    if (billingInterval === 'monthly') track('subscription_purchased_monthly');
+    else if (billingInterval === 'yearly') track('subscription_purchased_yearly');
 
     let attempts = 0;
     const interval = setInterval(async () => {

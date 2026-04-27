@@ -49,7 +49,7 @@ export function CtaSection(): React.ReactElement {
           className="flex flex-col items-center gap-6"
         >
           <motion.p variants={fadeUp} className="text-xs uppercase tracking-wider text-blue-400 font-mono">
-            Get started today
+            ready when you are
           </motion.p>
 
           <motion.h2
@@ -57,14 +57,13 @@ export function CtaSection(): React.ReactElement {
             variants={fadeUp}
             className="text-4xl md:text-5xl font-semibold text-gray-50 tracking-tight leading-tight"
           >
-            Start designing your system
+            Finally, you can see the full
             <br />
-            <span className="text-blue-400">today.</span>
+            <span className="text-blue-400">picture.</span>
           </motion.h2>
 
           <motion.p variants={fadeUp} className="text-gray-400 max-w-xl text-lg leading-relaxed">
-            Create a free account and start building your architecture in seconds.
-            No installs. No configuration. Just open the editor and go.
+            Free account, no credit card, no configuration. Open the editor and start building in the next 30 seconds.
           </motion.p>
 
           <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center gap-3 mt-2">

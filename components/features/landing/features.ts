@@ -9,22 +9,22 @@ export interface FeatureItem {
 export const features: FeatureItem[] = [
   {
     icon: MousePointer2,
-    title: 'Drag & drop canvas',
-    body: 'Place any of 100+ components on an infinite grid and connect them in seconds.',
+    title: 'Point, click, build',
+    body: 'Pick from 100+ pieces — servers, queues, databases — and drop them wherever feels right.',
   },
   {
     icon: Zap,
-    title: 'Animated data flow',
-    body: 'Every connection shows a live moving bubble so you can see how requests travel through your system.',
+    title: 'Traffic Visualized',
+    body: 'Animated dots travel your connections so you can see how data flows through your design.',
   },
   {
     icon: Table2,
-    title: 'ERD with cardinality',
-    body: 'Model databases with tables, primary keys, foreign keys, and one-to-many relationship markers.',
+    title: 'Database diagrams that make sense',
+    body: 'Map out your tables, relationships, and keys.',
   },
   {
     icon: Layers,
-    title: 'Tabs and auto-save',
-    body: 'Keep multiple diagrams open at once. Everything saves automatically in your browser.',
+    title: 'Never lose your work',
+    body: "Jump between diagrams, close the tab, come back later — everything's right where you left it.",
   },
 ];

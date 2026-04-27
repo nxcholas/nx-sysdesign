@@ -33,17 +33,17 @@ export function PricingSection(): React.ReactElement {
         className="flex flex-col items-start md:items-center gap-4 mb-12 md:text-center"
       >
         <motion.p variants={fadeUp} className="text-xs uppercase tracking-wider text-blue-400 font-mono">
-          Pricing
+          pick your plan
         </motion.p>
         <motion.h2
           id="pricing-heading"
           variants={fadeUp}
           className="text-3xl md:text-4xl font-semibold text-gray-50 tracking-tight"
         >
-          Simple, transparent pricing.
+          No surprises. Ever.
         </motion.h2>
         <motion.p variants={fadeUp} className="text-gray-400 max-w-2xl">
-          Free to get started. Upgrade to Pro for cloud sync across all your devices and priority support.
+          Start free, stay free, or go Pro when you&apos;re ready.
         </motion.p>
 
         {/* Toggle */}

@@ -159,7 +159,7 @@ function DiagramPreview() {
 export function LandingHero(): React.ReactElement {
   const reduce = useReducedMotion();
 
-  const headlineWords = ['Diagram', 'your', 'system.', 'Watch', 'the', 'data', 'move.'];
+  const headlineWords = ['Sketch', 'out', 'your', 'system.', 'Then', 'watch', 'it', 'come', 'alive.'];
 
   return (
     <section
@@ -188,7 +188,7 @@ export function LandingHero(): React.ReactElement {
                 aria-hidden="true"
                 className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"
               />
-              System Design, Visualized
+              your ideas, finally on the page
             </span>
           </motion.div>
 
@@ -197,7 +197,7 @@ export function LandingHero(): React.ReactElement {
             id="hero-heading"
             className="text-4xl md:text-6xl font-semibold tracking-tight text-gray-50 leading-tight"
           >
-            <span className="sr-only">Diagram your system. Watch the data move.</span>
+            <span className="sr-only">Sketch out your system. Then watch it come alive.</span>
             <span aria-hidden="true" className="flex flex-wrap gap-x-[0.3em] gap-y-1">
               {headlineWords.map((word, i) => (
                 <motion.span
@@ -205,7 +205,7 @@ export function LandingHero(): React.ReactElement {
                   initial={{ opacity: 0, y: reduce ? 0 : 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.45, delay: 0.15 + i * 0.07, ease: easeOut }}
-                  className={word === 'move.' ? 'text-blue-400' : undefined}
+                  className={word === 'alive.' ? 'text-blue-400' : undefined}
                 >
                   {word}
                 </motion.span>
@@ -218,8 +218,8 @@ export function LandingHero(): React.ReactElement {
             variants={fadeUp}
             className="text-lg md:text-xl text-gray-400 max-w-2xl leading-relaxed"
           >
-            A drag-and-drop canvas for modern architecture — 100+ components, ERDs, and live
-            animated data-flow connections. Sign up free and build in seconds.
+            Drop in servers, databases, and APIs. Connect the dots. Watch data flow through your
+            design in real time. No setup, no jargon — just build.
           </motion.p>
 
           {/* CTAs */}

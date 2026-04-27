@@ -62,10 +62,10 @@ export default async function LandingPage() {
                 id="features-heading"
                 className="text-3xl md:text-4xl font-semibold text-gray-50 mb-3 tracking-tight"
               >
-                Built for developers thinking in systems.
+                Everything you need to start designing.
               </h2>
               <p className="text-gray-400 max-w-2xl">
-                Everything you need to sketch an architecture, and nothing you don&apos;t.
+                Sketch fast, share easy, impress everyone.
               </p>
             </div>
             <FeatureGrid />
@@ -80,15 +80,15 @@ export default async function LandingPage() {
         >
           <div className="mx-auto max-w-6xl px-6 md:px-8">
             <div className="mb-10">
-              <p className="text-xs uppercase tracking-wider text-blue-400 font-mono mb-3">Components</p>
+              <p className="text-xs uppercase tracking-wider text-blue-400 font-mono mb-3">what&apos;s in the box</p>
               <h2
                 id="showcase-heading"
                 className="text-3xl md:text-4xl font-semibold text-gray-50 mb-3 tracking-tight"
               >
-                Every building block you need.
+                100+ pieces. Infinite possibilities.
               </h2>
               <p className="text-gray-400 max-w-2xl">
-                From load balancers to ER tables — 100+ components grouped the way you already think.
+                Load balancers, databases, queues, gateways — organized the way your brain already works.
               </p>
             </div>
             <ComponentShowcase />

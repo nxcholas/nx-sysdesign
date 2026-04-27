@@ -11,9 +11,9 @@ interface Stat {
 
 const stats: Stat[] = [
   { value: '100+', label: 'Components' },
-  { value: 'ERD', label: 'Table support' },
-  { value: 'Cloud', label: 'Diagram sync' },
-  { value: '$0', label: 'To get started' },
+  { value: 'ERD', label: 'database diagrams' },
+  { value: 'Cloud', label: 'saved to the cloud' },
+  { value: '$0', label: 'to start' },
 ];
 
 function AnimatedStat({ value, label, delay }: Stat & { delay: number }) {

@@ -24,10 +24,10 @@ export function FaqSection(): React.ReactElement {
           variants={fadeUp}
           className="text-3xl md:text-4xl font-semibold text-gray-50 mb-3 tracking-tight"
         >
-          Frequently asked questions.
+          You asked, we answered.
         </motion.h2>
         <motion.p variants={fadeUp} className="text-gray-400 max-w-2xl">
-          Short answers to common questions.
+          No fluff, just the stuff you actually want to know.
         </motion.p>
       </motion.div>
 

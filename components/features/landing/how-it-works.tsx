@@ -10,22 +10,22 @@ const steps = [
   {
     number: '01',
     icon: MousePointer2,
-    title: 'Drop components onto the canvas',
-    body: 'Choose from 100+ system design building blocks — servers, databases, caches, queues, and more. Drag them onto an infinite grid and position them however you think.',
+    title: 'Drag in your building blocks',
+    body: 'Servers, databases, caches, queues — grab whatever you need and drop it on the canvas. Rearrange until it feels right.',
     side: 'left' as const,
   },
   {
     number: '02',
     icon: GitMerge,
-    title: 'Connect them with arrows',
-    body: 'Draw connections between any two components. Add labels, set cardinality on ERD tables, and annotate with HTTP method helpers to make relationships crystal clear.',
+    title: 'Connect the pieces',
+    body: 'Draw lines between components, add labels, and show how everything talks to each other.',
     side: 'right' as const,
   },
   {
     number: '03',
     icon: Zap,
-    title: 'Watch data flow animate live',
-    body: 'Every connection plays a live bubble animation that shows data moving through your architecture. See the full request path from client to database in one glance.',
+    title: 'Watch it come to life',
+    body: 'Watch data flow through your diagram in real time. Suddenly you can see the full picture.',
     side: 'left' as const,
   },
 ];
@@ -54,10 +54,10 @@ export function HowItWorksSection(): React.ReactElement {
             variants={fadeUp}
             className="text-3xl md:text-4xl font-semibold text-gray-50 tracking-tight mb-3"
           >
-            From blank canvas to live architecture in minutes.
+            From zero to a full diagram in minutes.
           </motion.h2>
           <motion.p variants={fadeUp} className="text-gray-400 max-w-2xl">
-            Sign up free, open the editor, and start building — no installs, no configuration.
+            Sign up, open the editor, and start designing.
           </motion.p>
         </motion.div>
 

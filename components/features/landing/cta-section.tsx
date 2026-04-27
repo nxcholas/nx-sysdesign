@@ -57,7 +57,7 @@ export function CtaSection(): React.ReactElement {
             variants={fadeUp}
             className="text-4xl md:text-5xl font-semibold text-gray-50 tracking-tight leading-tight"
           >
-            Let's make your vision come to
+            Let&apos;s make your vision come to
             <br />
             <span className="text-blue-400">life.</span>
           </motion.h2>

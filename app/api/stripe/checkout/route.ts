@@ -29,24 +29,36 @@ export async function POST(req: Request) {
   if (existing?.stripeCustomerId) {
     stripeCustomerId = existing.stripeCustomerId;
   } else {
-    const user = await db.user.findUnique({ where: { id: userId }, select: { email: true, name: true } });
-    const customer = await stripe.customers.create({
-      email: user?.email ?? undefined,
-      name: user?.name ?? undefined,
-      metadata: { userId },
-    });
+    let customer;
+    try {
+      const user = await db.user.findUnique({ where: { id: userId }, select: { email: true, name: true } });
+      customer = await stripe.customers.create({
+        email: user?.email ?? undefined,
+        name: user?.name ?? undefined,
+        metadata: { userId },
+      });
+    } catch (err) {
+      console.error('[stripe/checkout] customer create failed:', err);
+      return NextResponse.json({ error: 'Failed to create Stripe customer.' }, { status: 500 });
+    }
     stripeCustomerId = customer.id;
   }
 
   const origin = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
 
-  const checkoutSession = await stripe.checkout.sessions.create({
-    customer: stripeCustomerId,
-    line_items: [{ price: priceId, quantity: 1 }],
-    mode: 'subscription',
-    success_url: `${origin}/app?checkout=success`,
-    cancel_url: `${origin}/app`,
-  });
+  let checkoutSession;
+  try {
+    checkoutSession = await stripe.checkout.sessions.create({
+      customer: stripeCustomerId,
+      line_items: [{ price: priceId, quantity: 1 }],
+      mode: 'subscription',
+      success_url: `${origin}/app?checkout=success`,
+      cancel_url: `${origin}/app`,
+    });
+  } catch (err) {
+    console.error('[stripe/checkout] session create failed:', err);
+    return NextResponse.json({ error: 'Failed to create checkout session.' }, { status: 500 });
+  }
 
   return NextResponse.json({ url: checkoutSession.url });
 }

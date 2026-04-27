@@ -19,6 +19,6 @@ export async function GET() {
 
   return NextResponse.json({
     status: subscription.status,
-    currentPeriodEnd: subscription.currentPeriodEnd.toISOString(),
+    currentPeriodEnd: subscription.currentPeriodEnd?.toISOString() ?? null,
   });
 }

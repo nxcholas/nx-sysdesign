@@ -23,15 +23,15 @@ export const changelogEntries: ChangelogEntry[] = [
     version: 'v0.26.3',
     date: 'April 2026',
     items: [
-      { type: 'chore', text: 'Rebranded product name and updated internal routing' },
+      { type: 'chore', text: 'General branding and navigation updates' },
     ],
   },
   {
     version: 'v0.26.2',
     date: 'April 2026',
     items: [
-      { type: 'fix', text: 'Billing subscription state reliability improvements' },
-      { type: 'fix', text: 'Checkout and payment flow stability fixes' },
+      { type: 'fix', text: 'API reliability improvements' },
+      { type: 'fix', text: 'User flow stability fixes' },
     ],
   },
   {
@@ -45,79 +45,79 @@ export const changelogEntries: ChangelogEntry[] = [
     version: 'v0.26.0',
     date: 'March 2026',
     items: [
-      { type: 'feat', text: 'Email verification and password recovery flow' },
-      { type: 'feat', text: 'Authentication system hardening' },
+      { type: 'feat', text: 'Account security improvements' },
+      { type: 'feat', text: 'Platform security hardening' },
     ],
   },
   {
     version: 'v0.25.0',
     date: 'March 2026',
     items: [
-      { type: 'feat', text: 'Persistent sign-in sessions' },
+      { type: 'feat', text: 'Session management improvements' },
     ],
   },
   {
     version: 'v0.24.0',
     date: 'March 2026',
     items: [
-      { type: 'feat', text: 'Text block formatting controls' },
+      { type: 'feat', text: 'Editor formatting improvements' },
     ],
   },
   {
     version: 'v0.22.0',
     date: 'March 2026',
     items: [
-      { type: 'feat', text: 'Connection label editing on the canvas' },
+      { type: 'feat', text: 'Canvas editing improvements' },
     ],
   },
   {
     version: 'v0.21.0',
     date: 'February 2026',
     items: [
-      { type: 'fix', text: 'Canvas drag and component interaction stability' },
+      { type: 'fix', text: 'Interaction stability improvements' },
     ],
   },
   {
     version: 'v0.20.0',
     date: 'February 2026',
     items: [
-      { type: 'feat', text: 'PNG export from the canvas' },
+      { type: 'feat', text: 'Export functionality' },
     ],
   },
   {
     version: 'v0.19.0',
     date: 'February 2026',
     items: [
-      { type: 'feat', text: 'Data flow visualization toggle' },
+      { type: 'feat', text: 'New canvas controls' },
     ],
   },
   {
     version: 'v0.18.0',
     date: 'February 2026',
     items: [
-      { type: 'feat', text: 'Autosave indicator and session persistence improvements' },
+      { type: 'feat', text: 'Background sync improvements' },
     ],
   },
   {
     version: 'v0.17.0',
     date: 'February 2026',
     items: [
-      { type: 'feat', text: 'Starter templates and diagram management' },
+      { type: 'feat', text: 'New workspace features' },
     ],
   },
   {
     version: 'v0.16.0 and earlier',
     date: 'January – February 2026',
     items: [
-      { type: 'feat', text: 'Keyboard shortcuts overlay' },
-      { type: 'feat', text: 'Mobile canvas guard' },
-      { type: 'feat', text: 'SEO, sitemap, and custom 404' },
-      { type: 'feat', text: 'Stripe billing and Pro tier' },
-      { type: 'feat', text: 'User accounts and cloud diagram storage' },
-      { type: 'feat', text: 'Copy, paste, and undo history' },
-      { type: 'feat', text: 'Shape and text tools' },
-      { type: 'feat', text: 'ER diagram and table support' },
-      { type: 'feat', text: 'Core canvas, component system, and data flow' },
+      { type: 'feat', text: 'Keyboard accessibility improvements' },
+      { type: 'feat', text: 'Mobile experience improvements' },
+      { type: 'feat', text: 'Discoverability and platform improvements' },
+      { type: 'feat', text: 'Billing and subscription features' },
+      { type: 'feat', text: 'Account and cloud storage support' },
+      { type: 'feat', text: 'Editing workflow improvements' },
+      { type: 'feat', text: 'New canvas tools' },
+      { type: 'feat', text: 'New diagram types' },
+      { type: 'feat', text: 'Initial release foundations' },
     ],
   },
 ];

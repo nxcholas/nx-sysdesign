@@ -17,7 +17,12 @@ export async function POST() {
     return NextResponse.json({ error: 'No active subscription found' }, { status: 404 });
   }
 
-  const origin = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+  const origin =
+    process.env.NEXTAUTH_URL ??
+    process.env.AUTH_URL ??
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : 'http://localhost:3000');
 
   let portalSession;
   try {

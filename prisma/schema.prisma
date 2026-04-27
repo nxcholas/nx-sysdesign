@@ -16,10 +16,12 @@ model User {
   tier          String        @default("free")
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-  accounts      Account[]
-  sessions      Session[]
-  diagrams      Diagram[]
-  subscription  Subscription?
+  accounts                Account[]
+  sessions                Session[]
+  diagrams                Diagram[]
+  subscription            Subscription?
+  passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
 }
 
 model Subscription {
@@ -81,4 +83,27 @@ model Diagram {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

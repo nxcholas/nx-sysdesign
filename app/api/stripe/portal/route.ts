@@ -27,7 +27,7 @@ export async function POST() {
     });
   } catch (err) {
     console.error('[stripe/portal] session create failed:', err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to open billing portal.' }, { status: 500 });
   }
 
   return NextResponse.json({ url: portalSession.url });

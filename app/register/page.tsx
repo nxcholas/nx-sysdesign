@@ -40,9 +40,9 @@ export default function RegisterPage() {
       return;
     }
 
-    // Auto sign-in after successful registration
+    // Auto sign-in after successful registration — normalize email to match stored value
     const result = await signIn('credentials', {
-      email,
+      email: email.toLowerCase().trim(),
       password,
       redirect: false,
     });

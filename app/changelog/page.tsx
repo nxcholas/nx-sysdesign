@@ -6,16 +6,16 @@ import { changelogEntries } from '@/components/features/changelog/changelog-data
 
 export const metadata: Metadata = {
   title: 'Changelog',
-  description: 'Every update to NX-Design, most recent first. See what has changed across releases.',
+  description: "Everything that's changed in NX-Design, newest first.",
   openGraph: {
-    title: 'Changelog — NX-Design',
-    description: 'Every update to NX-Design, most recent first.',
+    title: "What's new — NX-Design",
+    description: "Everything that's changed in NX-Design, newest first.",
     url: 'https://nxdesign.app/changelog',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Changelog — NX-Design',
-    description: 'Every update to NX-Design, most recent first.',
+    title: "What's new — NX-Design",
+    description: "Everything that's changed in NX-Design, newest first.",
   },
 };
 

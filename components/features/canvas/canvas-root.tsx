@@ -115,6 +115,10 @@ export interface CanvasRootProps {
   endDragHistory: () => void;
   // Diagram persistence callback
   onStateChange: () => void;
+  // Snap & alignment
+  snapEnabled: boolean;
+  onSnapToggle: () => void;
+  onAlign: (direction: import('@/lib/types').AlignmentDirection) => void;
 }
 
 export function CanvasRoot(props: CanvasRootProps) {
@@ -170,6 +174,9 @@ export function CanvasRoot(props: CanvasRootProps) {
     beginDragHistory,
     endDragHistory,
     onStateChange,
+    snapEnabled,
+    onSnapToggle,
+    onAlign,
   } = props;
 
   // useCanvasTool is purely local UI state — kept internal
@@ -350,7 +357,7 @@ export function CanvasRoot(props: CanvasRootProps) {
       setIsDragOver(false);
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const result = handleDrop(e, rect, transform);
+      const result = handleDrop(e, rect, transform, snapEnabled);
       if (!result) return;
       const { payload, x, y } = result;
       const { width, height } = getDimensions(payload);
@@ -974,6 +981,10 @@ export function CanvasRoot(props: CanvasRootProps) {
         onShapeSelect={setActiveShape}
         flowVisible={flowVisible}
         onFlowToggle={() => setFlowVisible(prev => !prev)}
+        snapEnabled={snapEnabled}
+        onSnapToggle={onSnapToggle}
+        selectedCount={selectedIds.length}
+        onAlign={onAlign}
       />
 
       {/* Empty state hint */}

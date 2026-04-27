@@ -73,7 +73,7 @@ export function HeaderActions({ onUpgrade, onBeforeSignOut }: HeaderActionsProps
         {/* Sign out */}
         <button
           type="button"
-          onClick={() => { void onBeforeSignOut().then(() => { clearCurrentNamespace(); signOut({ callbackUrl: '/sign-in' }); }); }}
+          onClick={() => { void onBeforeSignOut().then(() => { clearCurrentNamespace(); void signOut({ callbackUrl: `${window.location.origin}/sign-in` }); }); }}
           className="text-xs text-gray-400 hover:text-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
         >
           Sign out

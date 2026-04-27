@@ -13,6 +13,9 @@ export async function PATCH(req: Request) {
   if (!name) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 });
   }
+  if (name.length > 128) {
+    return NextResponse.json({ error: 'Name must be 128 characters or fewer.' }, { status: 400 });
+  }
 
   await db.user.update({
     where: { id: session.user.id },

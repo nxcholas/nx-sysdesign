@@ -63,17 +63,23 @@ export function AccountModal({ onClose, onUpgrade, onBeforeSignOut }: AccountMod
   }, [isPro]);
 
   async function handleSaveName() {
-    if (!nameInput.trim() || nameInput.trim() === user?.name) {
+    const trimmed = nameInput.trim();
+    if (!trimmed || trimmed === user?.name) {
       setEditingName(false);
       return;
     }
     setSavingName(true);
-    await fetch("/api/user/profile", {
+    const res = await fetch("/api/user/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: nameInput.trim() }),
+      body: JSON.stringify({ name: trimmed }),
     });
-    await updateSession();
+    if (res.ok) {
+      // Pass the new name directly so the client session reflects it immediately.
+      // The JWT callback only reads tier/emailVerified from DB, not name, so
+      // updateSession() alone would leave the displayed name stale.
+      await updateSession({ user: { name: trimmed } });
+    }
     setSavingName(false);
     setEditingName(false);
   }
@@ -303,7 +309,7 @@ export function AccountModal({ onClose, onUpgrade, onBeforeSignOut }: AccountMod
               onClick={() => {
                 void onBeforeSignOut().then(() => {
                   clearCurrentNamespace();
-                  signOut({ callbackUrl: "/sign-in" });
+                  void signOut({ callbackUrl: `${window.location.origin}/sign-in` });
                 });
               }}
               className="text-xs text-gray-500 hover:text-red-400 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded"

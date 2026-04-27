@@ -13,7 +13,9 @@ import type {
   TextStyle,
   ShapeStyle,
   ShapeKind,
+  AlignmentDirection,
 } from '@/lib/types';
+import { computeAlignedPositions } from '@/lib/canvas-utils';
 import { isRowPort } from '@/lib/connection-utils';
 import { getFrameBounds } from '@/lib/frame-utils';
 import { FRAME_DEFAULT_LABEL } from '@/lib/constants';
@@ -439,6 +441,16 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
         nextZIndex: baseZ + action.components.length,
       };
     }
+    case 'ALIGN_COMPONENTS': {
+      const positions = computeAlignedPositions(state.placedComponents, action.ids, action.direction);
+      if (Object.keys(positions).length === 0) return state;
+      return {
+        ...state,
+        placedComponents: state.placedComponents.map((c) =>
+          positions[c.id] ? { ...c, ...positions[c.id] } : c
+        ),
+      };
+    }
     case 'RESTORE_STATE':
       return action.state;
     default:
@@ -457,7 +469,7 @@ const initialState: CanvasState = {
 };
 
 const MUTATION_ACTIONS = new Set([
-  'ADD', 'MOVE', 'REMOVE', 'REMOVE_MANY', 'RESIZE',
+  'ADD', 'MOVE', 'REMOVE', 'REMOVE_MANY', 'RESIZE', 'ALIGN_COMPONENTS',
   'ADD_CONNECTION', 'REMOVE_CONNECTION',
   'ADD_FRAME', 'MOVE_FRAME', 'REMOVE_FRAME', 'RENAME_FRAME', 'RENAME_COMPONENT',
   'RESIZE_FRAME', 'SET_COMPONENT_FRAME', 'SET_FRAME_PARENT',
@@ -678,6 +690,10 @@ export function usePlacedComponents() {
     []
   );
 
+  const alignComponents = useCallback((ids: string[], direction: AlignmentDirection) => {
+    dispatch({ type: 'ALIGN_COMPONENTS', ids, direction });
+  }, []);
+
   return {
     state,
     placedComponents: state.placedComponents,
@@ -719,6 +735,7 @@ export function usePlacedComponents() {
     updateShapeKind,
     undo,
     pasteComponents,
+    alignComponents,
     beginDragHistory,
     endDragHistory,
   };

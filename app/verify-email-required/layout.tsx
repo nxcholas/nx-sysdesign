@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function VerifyEmailRequiredLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session) redirect('/sign-in');
-  if (!session.user.emailVerified) redirect('/verify-email-required');
+  if (session.user.emailVerified) redirect('/app');
   return <>{children}</>;
 }

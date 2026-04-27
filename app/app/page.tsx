@@ -26,6 +26,7 @@ export default function Page() {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState<boolean | null>(null);
+  const [snapEnabled, setSnapEnabled] = useState(false);
   const sessionTierRef = useRef(session?.user?.tier);
   sessionTierRef.current = session?.user?.tier;
 
@@ -234,6 +235,9 @@ export default function Page() {
           beginDragHistory={canvasHook.beginDragHistory}
           endDragHistory={canvasHook.endDragHistory}
           onStateChange={onStateChange}
+          snapEnabled={snapEnabled}
+          onSnapToggle={() => setSnapEnabled(v => !v)}
+          onAlign={(dir) => canvasHook.alignComponents(canvasHook.selectedIds, dir)}
         />
         )}
       </div>

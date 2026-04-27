@@ -45,7 +45,7 @@ const placedComponentSchema = z.object({
     strokeWidth: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   }).optional(),
   tableData: z.unknown().optional(), // complex nested structure, validated loosely
-}).loose(); // allow future fields without breaking saves
+});
 
 // Connection — sourceId/targetId/sourcePort/targetPort matching lib/types.ts
 const connectionSchema = z.object({
@@ -55,7 +55,7 @@ const connectionSchema = z.object({
   sourcePort: z.unknown(),
   targetPort: z.unknown(),
   cardinality: z.unknown().optional(),
-}).loose();
+});
 
 // Frame — flat x/y/width/height/label/zIndex matching lib/types.ts
 const frameSchema = z.object({
@@ -67,7 +67,7 @@ const frameSchema = z.object({
   height: z.number().positive(),
   zIndex: z.number(),
   parentFrameId: z.string().max(128).optional(),
-}).loose();
+});
 
 const viewportSchema = z.object({
   scale: z.number().positive().max(100),

@@ -40,7 +40,7 @@ export function LandingFooter(): React.ReactElement {
               component relationships — right in your browser.
             </p>
             <span className="text-xs text-gray-600 font-mono">
-              v{process.env.NEXT_PUBLIC_APP_VERSION}-beta
+              v{process.env.NEXT_PUBLIC_APP_VERSION}-stable
             </span>
           </div>
 

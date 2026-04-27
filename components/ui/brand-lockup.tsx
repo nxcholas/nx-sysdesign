@@ -34,7 +34,7 @@ export function BrandLockup({
         NX-Design
       </span>
       {showVersion && (
-        <span className="text-xs text-gray-600"> v{process.env.NEXT_PUBLIC_APP_VERSION}-beta</span>
+        <span className="text-xs text-gray-600"> v{process.env.NEXT_PUBLIC_APP_VERSION}-stable</span>
       )}
     </div>
   );

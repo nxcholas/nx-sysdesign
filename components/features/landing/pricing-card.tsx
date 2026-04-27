@@ -87,7 +87,7 @@ export function PricingCard({
             {ctaLabel}
           </ComingSoonButton>
         ) : (
-          <Link href={ctaHref || '/app'} className={primaryBtn}>
+          <Link href={ctaHref || '/canvas'} className={primaryBtn}>
             {ctaLabel}
           </Link>
         )}

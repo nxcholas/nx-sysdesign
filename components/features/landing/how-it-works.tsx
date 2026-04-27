@@ -134,7 +134,7 @@ export function HowItWorksSection(): React.ReactElement {
           className="mt-16 flex justify-center"
         >
           <Link
-            href="/app"
+            href="/canvas"
             className="inline-flex items-center justify-center h-11 px-6 rounded-md
               bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500

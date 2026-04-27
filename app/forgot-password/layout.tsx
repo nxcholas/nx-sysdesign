@@ -3,6 +3,6 @@ import { auth } from '@/auth';
 
 export default async function ForgotPasswordLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  if (session) redirect('/app');
+  if (session) redirect('/canvas');
   return <>{children}</>;
 }

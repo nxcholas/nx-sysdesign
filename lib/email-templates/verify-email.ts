@@ -7,7 +7,7 @@ export function verifyEmailHtml(code: string, name: string | null): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Your SysDesign verification code</title>
+  <title>Your NX-Design verification code</title>
 </head>
 <body style="margin:0;padding:0;background-color:#0f1117;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f1117;padding:48px 16px;">
@@ -27,7 +27,7 @@ export function verifyEmailHtml(code: string, name: string | null): string {
                     </svg>
                   </td>
                   <td style="padding-left:10px;vertical-align:middle;">
-                    <span style="font-size:15px;font-weight:600;color:#f3f4f6;letter-spacing:-0.01em;">SysDesign</span>
+                    <span style="font-size:15px;font-weight:600;color:#f3f4f6;letter-spacing:-0.01em;">NX-Design</span>
                   </td>
                 </tr>
               </table>
@@ -74,7 +74,7 @@ export function verifyEmailHtml(code: string, name: string | null): string {
           <tr>
             <td style="padding:20px 40px;border-top:1px solid #1f2937;">
               <p style="margin:0;font-size:12px;color:#4b5563;text-align:center;">
-                SysDesign · <a href="https://nxdesign.app" style="color:#3b82f6;text-decoration:none;">nxdesign.app</a>
+                NX-Design · <a href="https://nxdesign.app" style="color:#3b82f6;text-decoration:none;">nxdesign.app</a>
               </p>
             </td>
           </tr>
@@ -88,9 +88,9 @@ export function verifyEmailHtml(code: string, name: string | null): string {
 }
 
 export function verifyEmailText(code: string): string {
-  return `Your SysDesign verification code is: ${code}
+  return `Your NX-Design verification code is: ${code}
 
 Enter this code in the app to verify your email address. It expires in 15 minutes.
 
-If you didn't create a SysDesign account, you can safely ignore this email.`;
+If you didn't create a NX-Design account, you can safely ignore this email.`;
 }

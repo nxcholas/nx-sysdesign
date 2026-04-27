@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 import type { DragPayload, CanvasTransform } from '@/lib/types';
 import { screenToCanvas, snapToGrid } from '@/lib/canvas-utils';
 
-const DRAG_DATA_TYPE = 'application/x-sysdesign';
+const DRAG_DATA_TYPE = 'application/x-nx-design';
 
 export function useDragDrop() {
   /** Call this in onDragStart on a palette item. */

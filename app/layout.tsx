@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'SysDesign — System Design Visualizer',
+  title: 'NX-Design — System Design Visualizer',
   description:
     'A drag-and-drop canvas for visualizing system design components, HTTP flows, and architecture diagrams.',
 };

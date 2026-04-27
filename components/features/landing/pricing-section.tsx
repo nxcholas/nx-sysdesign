@@ -106,7 +106,7 @@ export function PricingSection(): React.ReactElement {
           period="forever"
           features={freeFeatures}
           ctaLabel="Open editor"
-          ctaHref="/app"
+          ctaHref="/canvas"
         />
         <PricingCard
           tier="Pro"

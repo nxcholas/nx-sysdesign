@@ -31,7 +31,7 @@ export function BrandLockup({
         </svg>
       </div>
       <span className="text-sm font-semibold text-gray-100 tracking-tight">
-        SysDesign
+        NX-Design
       </span>
       {showVersion && (
         <span className="text-xs text-gray-600"> v{process.env.NEXT_PUBLIC_APP_VERSION}-beta</span>

@@ -61,7 +61,7 @@ export default function VerifyEmailRequiredPage() {
     if (res.ok) {
       setInputState('success');
       await updateSession();
-      window.location.href = '/app';
+      window.location.href = '/canvas';
       return;
     }
 

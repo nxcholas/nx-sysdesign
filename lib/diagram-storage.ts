@@ -2,8 +2,8 @@
 // All reads return safe defaults on missing or corrupt data.
 // All writes swallow QuotaExceededError silently.
 //
-// Keys are namespaced per user: `sysdesign:user_<id>:<key>` for authenticated
-// users and `sysdesign:anon:<key>` for anonymous visitors. Call
+// Keys are namespaced per user: `nx-design:user_<id>:<key>` for authenticated
+// users and `nx-design:anon:<key>` for anonymous visitors. Call
 // setStorageNamespace() once the auth session is known before reading or
 // writing anything.
 
@@ -11,7 +11,7 @@ import type { DiagramSchema, SaveMode } from '@/lib/types';
 
 // --- Namespace management ---
 
-let _namespace = 'sysdesign:anon';
+let _namespace = 'nx-design:anon';
 
 export function setStorageNamespace(ns: string): void {
   _namespace = ns;
@@ -37,10 +37,10 @@ function keyOpenTabs()  { return `${_namespace}:openTabIds`; }
 function keySaveMode()  { return `${_namespace}:saveMode`; }
 
 // Legacy named exports kept for any external consumers — point at anon namespace.
-export const STORAGE_KEY_DIAGRAMS  = 'sysdesign:anon:diagrams';
-export const STORAGE_KEY_ACTIVE_ID = 'sysdesign:anon:activeDiagramId';
-export const STORAGE_KEY_OPEN_TABS = 'sysdesign:anon:openTabIds';
-export const STORAGE_KEY_SAVE_MODE = 'sysdesign:anon:saveMode';
+export const STORAGE_KEY_DIAGRAMS  = 'nx-design:anon:diagrams';
+export const STORAGE_KEY_ACTIVE_ID = 'nx-design:anon:activeDiagramId';
+export const STORAGE_KEY_OPEN_TABS = 'nx-design:anon:openTabIds';
+export const STORAGE_KEY_SAVE_MODE = 'nx-design:anon:saveMode';
 
 // --- Availability guard (cached at module scope) ---
 
@@ -191,6 +191,34 @@ export function computeNextUntitledName(diagrams: DiagramSchema[]): string {
     }
   }
   return `Untitled Diagram ${max + 1}`;
+}
+
+// --- Legacy namespace migration (sysdesign: → nx-design:) ---
+// Runs once on first load after the rename. Copies any data stored under the
+// old sysdesign: prefix into the matching nx-design: key, then removes the
+// old entry so the migration doesn't repeat. Safe to call multiple times.
+const LEGACY_PREFIXES = ['sysdesign:anon', 'sysdesign:user_'];
+const LEGACY_SUFFIXES = [':diagrams', ':activeDiagramId', ':openTabIds', ':saveMode'];
+
+export function migrateLegacyNamespace(): void {
+  if (!isLocalStorageAvailable()) return;
+  try {
+    const keys = Object.keys(localStorage);
+    for (const key of keys) {
+      const isLegacy = LEGACY_PREFIXES.some((p) => key.startsWith(p));
+      if (!isLegacy) continue;
+      const hasSuffix = LEGACY_SUFFIXES.some((s) => key.endsWith(s));
+      if (!hasSuffix) continue;
+      const newKey = key.replace('sysdesign:', 'nx-design:');
+      if (localStorage.getItem(newKey) === null) {
+        const value = localStorage.getItem(key);
+        if (value !== null) localStorage.setItem(newKey, value);
+      }
+      localStorage.removeItem(key);
+    }
+  } catch {
+    // Swallow silently — migration is best-effort.
+  }
 }
 
 // Keep safeRemoveItem referenced to avoid lint unused warning.

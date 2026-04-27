@@ -132,7 +132,7 @@ export default function Page() {
         <div>
           <h1 className="text-2xl font-semibold mb-2">Desktop Only</h1>
           <p className="text-sm text-gray-400 max-w-xs leading-relaxed">
-            SysDesign requires a desktop browser. The canvas editor uses drag,
+            NX-Design requires a desktop browser. The canvas editor uses drag,
             zoom, and keyboard shortcuts that aren&apos;t supported on mobile.
           </p>
         </div>

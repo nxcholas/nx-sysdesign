@@ -224,7 +224,7 @@ export function LandingHero(): React.ReactElement {
 
           {/* CTAs */}
           <motion.div variants={fadeUp} className="flex flex-wrap items-center gap-3 mt-2">
-            <Link href="/app" className={primaryBtn}>
+            <Link href="/canvas" className={primaryBtn}>
               Open editor →
             </Link>
             <a href="#features" className={ghostBtn}>
@@ -248,7 +248,7 @@ export function LandingHero(): React.ReactElement {
             <span className="w-2.5 h-2.5 rounded-full bg-gray-700" />
             <span className="w-2.5 h-2.5 rounded-full bg-gray-700" />
             <span className="w-2.5 h-2.5 rounded-full bg-gray-700" />
-            <span className="ml-3 text-xs font-mono text-gray-600">SysDesign — untitled-1</span>
+            <span className="ml-3 text-xs font-mono text-gray-600">NX-Design — untitled-1</span>
           </div>
           <div className="p-4 h-[calc(100%-2.25rem)]">
             <DiagramPreview />

@@ -55,11 +55,11 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push('/app');
+    router.push('/canvas');
   }
 
   async function handleGitHub() {
-    await signIn('github', { redirectTo: '/app' });
+    await signIn('github', { redirectTo: '/canvas' });
   }
 
   return (

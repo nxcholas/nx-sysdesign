@@ -6,7 +6,7 @@ export function welcomeEmailHtml(name: string | null): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to SysDesign</title>
+  <title>Welcome to NX-Design</title>
 </head>
 <body style="margin:0;padding:0;background-color:#0f1117;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f1117;padding:48px 16px;">
@@ -26,7 +26,7 @@ export function welcomeEmailHtml(name: string | null): string {
                     </svg>
                   </td>
                   <td style="padding-left:10px;vertical-align:middle;">
-                    <span style="font-size:15px;font-weight:600;color:#f3f4f6;letter-spacing:-0.01em;">SysDesign</span>
+                    <span style="font-size:15px;font-weight:600;color:#f3f4f6;letter-spacing:-0.01em;">NX-Design</span>
                   </td>
                 </tr>
               </table>
@@ -62,7 +62,7 @@ export function welcomeEmailHtml(name: string | null): string {
                   <td align="center">
                     <a href="https://nxdesign.app/app"
                        style="display:inline-block;padding:12px 32px;background-color:#2563eb;color:#ffffff;font-size:14px;font-weight:500;text-decoration:none;border-radius:8px;letter-spacing:-0.01em;">
-                      Open SysDesign
+                      Open NX-Design
                     </a>
                   </td>
                 </tr>
@@ -91,7 +91,7 @@ export function welcomeEmailHtml(name: string | null): string {
 
 export function welcomeEmailText(name: string | null): string {
   const displayName = name ?? 'there';
-  return `Welcome to SysDesign, ${displayName}!
+  return `Welcome to NX-Design, ${displayName}!
 
 Your account is ready. Start building system design diagrams at https://nxdesign.app/app
 

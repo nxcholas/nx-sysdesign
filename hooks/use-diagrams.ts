@@ -17,6 +17,7 @@ import {
   createBlankDiagram,
   computeNextUntitledName,
   setStorageNamespace,
+  migrateLegacyNamespace,
 } from '@/lib/diagram-storage';
 
 interface UseDiagramsOptions {
@@ -166,10 +167,14 @@ export function useDiagrams(options: UseDiagramsOptions): UseDiagramsReturn {
 
   useEffect(() => {
     if (sessionStatus === 'loading') return;
+
+    // One-time migration: copy diagrams stored under old sysdesign: prefix to nx-design: prefix.
+    migrateLegacyNamespace();
+
     if (sessionStatus === 'authenticated' && session?.user?.id) {
-      setStorageNamespace(`sysdesign:user_${session.user.id}`);
+      setStorageNamespace(`nx-design:user_${session.user.id}`);
     } else {
-      setStorageNamespace('sysdesign:anon');
+      setStorageNamespace('nx-design:anon');
     }
     setNamespaceReady(true);
   }, [sessionStatus, session?.user?.id]);

@@ -5,7 +5,7 @@ export interface FaqEntry {
 
 export const faq: FaqEntry[] = [
   {
-    q: 'Do I need an account to use SysDesign?',
+    q: 'Do I need an account to use NX-Design?',
     a: 'Yes — an account is required to create and save diagrams. You can sign up for free in seconds and start building right away.',
   },
   {
@@ -34,6 +34,6 @@ export const faq: FaqEntry[] = [
   },
   {
     q: 'Is my payment information secure?',
-    a: 'Yes. All payments are processed by Stripe. SysDesign never stores your card details.',
+    a: 'Yes. All payments are processed by Stripe. NX-Design never stores your card details.',
   },
 ];

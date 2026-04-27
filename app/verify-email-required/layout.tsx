@@ -4,6 +4,6 @@ import { auth } from '@/auth';
 export default async function VerifyEmailRequiredLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session) redirect('/sign-in');
-  if (session.user.emailVerified) redirect('/app');
+  if (session.user.emailVerified) redirect('/canvas');
   return <>{children}</>;
 }

@@ -69,7 +69,7 @@ export function CtaSection(): React.ReactElement {
 
           <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center gap-3 mt-2">
             <Link
-              href="/app"
+              href="/canvas"
               className="inline-flex items-center justify-center h-12 px-7 rounded-md
                 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500

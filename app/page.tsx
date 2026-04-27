@@ -13,21 +13,21 @@ import { CtaSection } from '@/components/features/landing/cta-section';
 import { LandingFooter } from '@/components/features/landing/landing-footer';
 
 export const metadata: Metadata = {
-  title: 'SysDesign — Visualize System Architecture in Your Browser',
+  title: 'NX-Design — Visualize System Architecture in Your Browser',
   description:
     'Drag-and-drop system design canvas with 100+ components, ERD tables, and live animated data-flow connections. Free to start, diagrams saved to the cloud.',
   keywords: 'system design, architecture diagram, ERD, data flow, drag and drop, browser tool, software architecture',
   openGraph: {
-    title: 'SysDesign — Visualize System Architecture in Your Browser',
+    title: 'NX-Design — Visualize System Architecture in Your Browser',
     description:
       'Drag-and-drop canvas for system design with live animated data flow. 100+ components, ERD tables, no setup required.',
     url: 'https://nxdesign.app',
-    siteName: 'SysDesign',
+    siteName: 'NX-Design',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SysDesign — System Design Visualizer',
+    title: 'NX-Design — System Design Visualizer',
     description:
       'Drag-and-drop canvas with 100+ components and live animated data-flow connections.',
   },
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 
 export default async function LandingPage() {
   const session = await auth();
-  if (session) redirect('/app');
+  if (session) redirect('/canvas');
 
   return (
     <div id="top">

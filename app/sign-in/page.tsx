@@ -32,11 +32,11 @@ export default function SignInPage() {
       return;
     }
 
-    router.push('/app');
+    router.push('/canvas');
   }
 
   async function handleGitHub() {
-    await signIn('github', { redirectTo: '/app' });
+    await signIn('github', { redirectTo: '/canvas' });
   }
 
   return (
@@ -46,7 +46,7 @@ export default function SignInPage() {
           <div className="flex flex-col items-center gap-4">
             <BrandLockup showVersion={false} />
             <div className="text-center">
-              <h1 className="text-lg font-semibold text-gray-100">Sign in to SysDesign</h1>
+              <h1 className="text-lg font-semibold text-gray-100">Sign in to NX-Design</h1>
               <p className="text-sm text-gray-400 mt-1">
                 Save your diagrams to the cloud and access them anywhere.
               </p>

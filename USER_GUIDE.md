@@ -1,16 +1,16 @@
-# SysDesign — User Guide
+# NX-Design — User Guide
 
-## What Is SysDesign?
+## What Is NX-Design?
 
-SysDesign is a visual diagramming tool that lets you map out how a software system works — specifically, **how data moves through it**. Instead of describing your system in words, you place building blocks on a canvas and connect them together. Animated flow bubbles travel along those connections in real time, showing you at a glance where data comes from, where it goes, and how the pieces of your system talk to each other.
+NX-Design is a visual diagramming tool that lets you map out how a software system works — specifically, **how data moves through it**. Instead of describing your system in words, you place building blocks on a canvas and connect them together. Animated flow bubbles travel along those connections in real time, showing you at a glance where data comes from, where it goes, and how the pieces of your system talk to each other.
 
-You do not need to be a software engineer to use SysDesign. If you can drag and drop, you can build a diagram.
+You do not need to be a software engineer to use NX-Design. If you can drag and drop, you can build a diagram.
 
 ---
 
 ## Who Is This For?
 
-SysDesign is useful for:
+NX-Design is useful for:
 
 - **Product managers and business analysts** who need to communicate how a product works without writing code
 - **Software engineers** sketching out a new feature or explaining an existing system to teammates
@@ -21,7 +21,7 @@ SysDesign is useful for:
 
 ## How the Application Works
 
-When you open SysDesign you see three areas:
+When you open NX-Design you see three areas:
 
 | Area | What it does |
 |---|---|
@@ -39,7 +39,7 @@ Your diagrams are saved automatically in your browser as you work, so you will n
 
 ## Supported System Design Types
 
-SysDesign covers the building blocks of modern software architecture. Components are grouped into the following categories:
+NX-Design covers the building blocks of modern software architecture. Components are grouped into the following categories:
 
 ### Clients & Devices
 The people and devices that start a request.
@@ -200,7 +200,7 @@ You can work on several diagrams at once using tabs in the top bar — similar t
 
 ### Undoing and Redoing Changes
 
-SysDesign keeps a history of your recent edits on each diagram, so you can step back if you make a mistake.
+NX-Design keeps a history of your recent edits on each diagram, so you can step back if you make a mistake.
 
 - **Undo** the last change: press **Ctrl+Z** (Windows / Linux) or **Cmd+Z** (Mac).
 - The history covers structural edits: adding, moving, resizing, or deleting components and frames; creating or deleting connections; editing ERD table rows and keys; changing cardinality; editing text, text style, shape style, and shape type; and pasting.
@@ -251,4 +251,4 @@ The blue dot that travels along connection lines represents data moving through 
 Press **Ctrl+Z** (or **Cmd+Z** on Mac) right away to undo. The last 50 edits on the current diagram are undoable, covering component and frame edits, connections, and text changes. Note that there is no redo yet, and undo history resets when you reload the page or switch tabs, so undo sooner rather than later.
 
 **Do I need an account?**
-No account is required to use SysDesign.
+No account is required to use NX-Design.

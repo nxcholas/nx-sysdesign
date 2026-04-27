@@ -4,7 +4,7 @@ export function resetPasswordEmailHtml(resetUrl: string): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reset your SysDesign password</title>
+  <title>Reset your NX-Design password</title>
 </head>
 <body style="margin:0;padding:0;background-color:#0f1117;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f1117;padding:48px 16px;">
@@ -24,7 +24,7 @@ export function resetPasswordEmailHtml(resetUrl: string): string {
                     </svg>
                   </td>
                   <td style="padding-left:10px;vertical-align:middle;">
-                    <span style="font-size:15px;font-weight:600;color:#f3f4f6;letter-spacing:-0.01em;">SysDesign</span>
+                    <span style="font-size:15px;font-weight:600;color:#f3f4f6;letter-spacing:-0.01em;">NX-Design</span>
                   </td>
                 </tr>
               </table>
@@ -38,7 +38,7 @@ export function resetPasswordEmailHtml(resetUrl: string): string {
                 Reset your password
               </h1>
               <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#9ca3af;">
-                We received a request to reset your SysDesign password. Click the button below to choose a new one. This link expires in <strong style="color:#d1d5db;">1 hour</strong>.
+                We received a request to reset your NX-Design password. Click the button below to choose a new one. This link expires in <strong style="color:#d1d5db;">1 hour</strong>.
               </p>
 
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
@@ -80,7 +80,7 @@ export function resetPasswordEmailHtml(resetUrl: string): string {
           <tr>
             <td style="padding:20px 40px;border-top:1px solid #1f2937;">
               <p style="margin:0;font-size:12px;color:#4b5563;text-align:center;">
-                SysDesign · <a href="https://nxdesign.app" style="color:#3b82f6;text-decoration:none;">nxdesign.app</a>
+                NX-Design · <a href="https://nxdesign.app" style="color:#3b82f6;text-decoration:none;">nxdesign.app</a>
               </p>
             </td>
           </tr>
@@ -94,7 +94,7 @@ export function resetPasswordEmailHtml(resetUrl: string): string {
 }
 
 export function resetPasswordEmailText(resetUrl: string): string {
-  return `Reset your SysDesign password
+  return `Reset your NX-Design password
 
 We received a request to reset your password. Visit the link below to choose a new one (expires in 1 hour):
 

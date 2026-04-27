@@ -4,13 +4,13 @@ import { resetPasswordEmailHtml, resetPasswordEmailText } from './email-template
 import { verifyEmailHtml, verifyEmailText } from './email-templates/verify-email';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = 'SysDesign <noreply@nxdesign.app>';
+const FROM = 'NX-Design <noreply@nxdesign.app>';
 
 export async function sendWelcomeEmail(to: string, name: string | null) {
   await resend.emails.send({
     from: FROM,
     to,
-    subject: 'Welcome to SysDesign',
+    subject: 'Welcome to NX-Design',
     html: welcomeEmailHtml(name),
     text: welcomeEmailText(name),
   });
@@ -21,7 +21,7 @@ export async function sendPasswordResetEmail(to: string, token: string) {
   await resend.emails.send({
     from: FROM,
     to,
-    subject: 'Reset your SysDesign password',
+    subject: 'Reset your NX-Design password',
     html: resetPasswordEmailHtml(resetUrl),
     text: resetPasswordEmailText(resetUrl),
   });
@@ -31,7 +31,7 @@ export async function sendVerificationEmail(to: string, name: string | null, cod
   await resend.emails.send({
     from: FROM,
     to,
-    subject: 'Your SysDesign verification code',
+    subject: 'Your NX-Design verification code',
     html: verifyEmailHtml(code, name),
     text: verifyEmailText(code),
   });

@@ -96,7 +96,7 @@ export function ExportButton({
 
       const link = document.createElement('a');
       link.href = dataUrl;
-      link.download = `sysdesign-${safeName}-${date}.png`;
+      link.download = `nx-design-${safeName}-${date}.png`;
       link.click();
     } catch {
       alert('Export failed. Please try again.');

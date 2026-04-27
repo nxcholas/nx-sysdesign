@@ -14,7 +14,7 @@ const productLinks = [
 ];
 
 const appLinks = [
-  { href: '/app', label: 'Open editor' },
+  { href: '/canvas', label: 'Open editor' },
   { href: '/register', label: 'Get started' },
   { href: '/sign-in', label: 'Sign in' },
 ];
@@ -83,7 +83,7 @@ export function LandingFooter(): React.ReactElement {
 
         {/* Bottom bar */}
         <div className="border-t border-panel-border/50 pt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-gray-600">
-          <span>© 2026 SysDesign. All rights reserved.</span>
+          <span>© 2026 NX-Design. All rights reserved.</span>
           <a
             href="#top"
             className="hover:text-gray-400 transition-colors focus-visible:outline-none

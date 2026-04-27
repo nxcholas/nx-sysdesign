@@ -43,18 +43,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     maxAge: 7 * 24 * 60 * 60, // 7 days
   },
   callbacks: {
-    async signIn({ user, account }) {
-      // GitHub OAuth: stamp emailVerified if not already set so users bypass the OTP gate.
-      // PrismaAdapter may or may not write it depending on the GitHub profile payload.
-      if (account?.provider === 'github' && user?.id) {
-        await db.user.updateMany({
-          where: { id: user.id, emailVerified: null },
-          data: { emailVerified: new Date() },
-        }).catch(() => null);
-      }
-      return true;
-    },
-    async jwt({ token, user, trigger, session: sessionData }) {
+    async jwt({ token, user, account, trigger, session: sessionData }) {
       if (user?.id) {
         token.id = user.id;
       }
@@ -62,13 +51,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (trigger === 'update' && sessionData?.user?.name) {
         token.name = sessionData.user.name;
       }
+      // On first GitHub OAuth sign-in, account is present. Stamp emailVerified directly
+      // on the token and persist it to the DB in the same step, so the token is always
+      // correct regardless of whether subsequent jwt calls have account available.
+      if (account?.provider === 'github' && token.id) {
+        const now = new Date();
+        await db.user.update({
+          where: { id: token.id as string },
+          data: { emailVerified: now },
+        });
+        token.emailVerified = now;
+      }
       if (token.id) {
         const dbUser = await db.user.findUnique({
           where: { id: token.id as string },
           select: { tier: true, emailVerified: true, name: true },
         });
         token.tier = dbUser?.tier ?? 'free';
-        token.emailVerified = dbUser?.emailVerified ?? null;
+        // Always read emailVerified from DB unless the token already carries a verified Date.
+        // This ensures credentials users see the updated value after OTP verification
+        // (updateSession re-runs this callback), while preserving the Date stamped above
+        // for GitHub users in the same request where account is present.
+        if (!token.emailVerified) {
+          token.emailVerified = dbUser?.emailVerified ?? null;
+        }
         // Only overwrite name from DB if not in the middle of a client-triggered update
         if (trigger !== 'update') {
           token.name = dbUser?.name ?? token.name ?? null;

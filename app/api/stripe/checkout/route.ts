@@ -51,6 +51,8 @@ export async function POST(req: Request) {
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
       : 'http://localhost:3000');
 
+  console.log('[stripe/checkout] origin:', origin, '| priceId:', priceId);
+
   let checkoutSession;
   try {
     checkoutSession = await stripe.checkout.sessions.create({
@@ -61,8 +63,9 @@ export async function POST(req: Request) {
       cancel_url: `${origin}/app`,
     });
   } catch (err) {
-    console.error('[stripe/checkout] session create failed:', err);
-    return NextResponse.json({ error: 'Failed to create checkout session.' }, { status: 500 });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[stripe/checkout] session create failed:', message);
+    return NextResponse.json({ error: 'Failed to create checkout session.', detail: message }, { status: 500 });
   }
 
   return NextResponse.json({ url: checkoutSession.url });

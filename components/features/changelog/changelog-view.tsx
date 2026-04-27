@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { fadeUp, staggerContainer, viewportOnce } from '@/lib/motion';
+import { fadeUp, staggerContainer } from '@/lib/motion';
 import { ChangelogToc } from './changelog-toc';
 import { ChangelogSection } from './changelog-section';
 import type { ChangelogEntry } from './changelog-data';

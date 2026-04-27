@@ -13,23 +13,23 @@ import { CtaSection } from '@/components/features/landing/cta-section';
 import { LandingFooter } from '@/components/features/landing/landing-footer';
 
 export const metadata: Metadata = {
-  title: 'NX-Design — Visualize System Architecture in Your Browser',
+  title: 'NX-Design — Design your system. Then watch it come to life.',
   description:
-    'Drag-and-drop system design canvas with 100+ components, ERD tables, and live animated data-flow connections. Free to start, diagrams saved to the cloud.',
+    'Drop in servers, databases, and APIs. Connect the dots. Watch data flow through your design in real time. No setup, no jargon — just build.',
   keywords: 'system design, architecture diagram, ERD, data flow, drag and drop, browser tool, software architecture',
   openGraph: {
-    title: 'NX-Design — Visualize System Architecture in Your Browser',
+    title: 'NX-Design — Design your system. Then watch it come to life.',
     description:
-      'Drag-and-drop canvas for system design with live animated data flow. 100+ components, ERD tables, no setup required.',
+      'Drop in components, connect the pieces, watch it come alive. Free to start, no setup required.',
     url: 'https://nxdesign.app',
     siteName: 'NX-Design',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'NX-Design — System Design Visualizer',
+    title: 'NX-Design — Design your system. Then watch it come to life.',
     description:
-      'Drag-and-drop canvas with 100+ components and live animated data-flow connections.',
+      'Drop in components, connect the pieces, watch it come alive. Free to start, no setup required.',
   },
 };
 

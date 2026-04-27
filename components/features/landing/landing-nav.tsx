@@ -11,6 +11,7 @@ const navLinks = [
   { href: '#features', label: 'Features' },
   { href: '#pricing', label: 'Pricing' },
   { href: '#faq', label: 'FAQ' },
+  { href: '/changelog', label: 'Changelog' },
 ];
 
 export function LandingNav(): React.ReactElement {
@@ -45,22 +46,38 @@ export function LandingNav(): React.ReactElement {
 
         {/* Desktop nav */}
         <nav aria-label="Primary" className="hidden md:flex items-center gap-8">
-          {navLinks.map((link, i) => (
-            <motion.a
-              key={link.href}
-              href={link.href}
-              custom={i}
-              variants={itemVariants}
-              initial="hidden"
-              animate="visible"
-              className="relative text-sm text-gray-400 hover:text-gray-100 transition-colors
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded
-                after:absolute after:bottom-[-2px] after:left-0 after:h-px after:w-0 after:bg-blue-500
-                after:transition-all after:duration-200 hover:after:w-full"
-            >
-              {link.label}
-            </motion.a>
-          ))}
+          {navLinks.map((link, i) => {
+            const linkClass = `relative text-sm text-gray-400 hover:text-gray-100 transition-colors
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded
+              after:absolute after:bottom-[-2px] after:left-0 after:h-px after:w-0 after:bg-blue-500
+              after:transition-all after:duration-200 hover:after:w-full`;
+
+            return link.href.startsWith('#') ? (
+              <motion.a
+                key={link.href}
+                href={link.href}
+                custom={i}
+                variants={itemVariants}
+                initial="hidden"
+                animate="visible"
+                className={linkClass}
+              >
+                {link.label}
+              </motion.a>
+            ) : (
+              <motion.div
+                key={link.href}
+                custom={i}
+                variants={itemVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <Link href={link.href} className={linkClass}>
+                  {link.label}
+                </Link>
+              </motion.div>
+            );
+          })}
         </nav>
 
         {/* Desktop CTAs */}
@@ -113,18 +130,30 @@ export function LandingNav(): React.ReactElement {
             className="md:hidden overflow-hidden border-t border-header-border bg-header-bg"
           >
             <nav aria-label="Mobile primary" className="flex flex-col px-6 py-4 gap-1">
-              {navLinks.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="text-sm text-gray-300 hover:text-white py-2.5 border-b border-panel-border/40
-                    last:border-0 transition-colors focus-visible:outline-none focus-visible:ring-2
-                    focus-visible:ring-blue-500 rounded"
-                >
-                  {link.label}
-                </a>
-              ))}
+              {navLinks.map((link) => {
+                const mobileLinkClass = `text-sm text-gray-300 hover:text-white py-2.5 border-b border-panel-border/40
+                  last:border-0 transition-colors focus-visible:outline-none focus-visible:ring-2
+                  focus-visible:ring-blue-500 rounded`;
+                return link.href.startsWith('#') ? (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={mobileLinkClass}
+                  >
+                    {link.label}
+                  </a>
+                ) : (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={mobileLinkClass}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
               <div className="flex flex-col gap-2 pt-3">
                 <Link
                   href="/sign-in"

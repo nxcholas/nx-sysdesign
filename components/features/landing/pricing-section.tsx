@@ -6,16 +6,14 @@ import { PricingCard } from './pricing-card';
 import { fadeUp, staggerContainer, viewportOnce } from '@/lib/motion';
 
 const freeFeatures = [
-  'Unlimited local diagrams',
   '100+ system design components',
-  'ERD tables with cardinality',
   'Animated data-flow connections',
-  'Auto-save in your browser',
+  'Auto-save and cloud-sync',
 ];
 
 const proFeatures = [
   'Everything in Free',
-  'Account sync across devices',
+  'Unlimited Diagrams',
   'Priority support',
   'Early access to new features',
 ];
@@ -40,10 +38,10 @@ export function PricingSection(): React.ReactElement {
           variants={fadeUp}
           className="text-3xl md:text-4xl font-semibold text-gray-50 tracking-tight"
         >
-          No surprises. Ever.
+          Unlock more with Pro.
         </motion.h2>
         <motion.p variants={fadeUp} className="text-gray-400 max-w-2xl">
-          Start free, stay free, or go Pro when you&apos;re ready.
+          Design for free, or upgrade when you&apos;re ready.
         </motion.p>
 
         {/* Toggle */}

@@ -49,7 +49,7 @@ export function CtaSection(): React.ReactElement {
           className="flex flex-col items-center gap-6"
         >
           <motion.p variants={fadeUp} className="text-xs uppercase tracking-wider text-blue-400 font-mono">
-            ready when you are
+            start building now
           </motion.p>
 
           <motion.h2
@@ -57,9 +57,9 @@ export function CtaSection(): React.ReactElement {
             variants={fadeUp}
             className="text-4xl md:text-5xl font-semibold text-gray-50 tracking-tight leading-tight"
           >
-            Finally, you can see the full
+            Let's make your vision come to
             <br />
-            <span className="text-blue-400">picture.</span>
+            <span className="text-blue-400">life.</span>
           </motion.h2>
 
           <motion.p variants={fadeUp} className="text-gray-400 max-w-xl text-lg leading-relaxed">

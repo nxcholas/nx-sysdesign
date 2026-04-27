@@ -159,7 +159,7 @@ function DiagramPreview() {
 export function LandingHero(): React.ReactElement {
   const reduce = useReducedMotion();
 
-  const headlineWords = ['Sketch', 'out', 'your', 'system.', 'Then', 'watch', 'it', 'come', 'alive.'];
+  const headlineWords = ['Design', 'your', 'system.', 'Then', 'watch', 'it', 'come', 'to', 'life.'];
 
   return (
     <section

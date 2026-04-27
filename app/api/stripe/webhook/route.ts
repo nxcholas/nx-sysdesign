@@ -108,10 +108,13 @@ export async function POST(req: Request) {
         const existing = await db.subscription.findUnique({ where: { stripeCustomerId: customerId } });
         if (!existing) break;
 
-        await db.subscription.update({
-          where: { stripeCustomerId: customerId },
-          data: { status: 'past_due' },
-        });
+        await db.$transaction([
+          db.subscription.update({
+            where: { stripeCustomerId: customerId },
+            data: { status: 'past_due' },
+          }),
+          db.user.update({ where: { id: existing.userId }, data: { tier: 'free' } }),
+        ]);
         break;
       }
     }

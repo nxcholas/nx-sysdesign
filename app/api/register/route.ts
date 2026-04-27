@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import { track } from '@vercel/analytics/server';
 import { db } from '@/lib/db';
 import { sendVerificationEmail } from '@/lib/email';
 
@@ -65,6 +66,8 @@ export async function POST(req: Request) {
       password: hashed,
     },
   });
+
+  await track('account_created');
 
   // Generate 6-digit OTP (15 min expiry)
   const otp = generateOtp();

@@ -94,12 +94,8 @@ export default function Page() {
 
   const { closeTab } = diagrams;
   const handleCloseTab = useCallback((id: string) => {
-    if (diagrams.diagrams.length === 1) {
-      setDeleteConfirmId(id);
-    } else {
-      closeTab(id);
-    }
-  }, [diagrams.diagrams.length, closeTab]);
+    setDeleteConfirmId(id);
+  }, []);
 
   const { notifyStateChanged } = diagrams;
   const onStateChange = useCallback(() => {

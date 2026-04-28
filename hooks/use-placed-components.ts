@@ -333,6 +333,14 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
         ),
       };
     }
+    case 'UPDATE_CONNECTION_LABEL_T': {
+      return {
+        ...state,
+        connections: state.connections.map((c) =>
+          c.id === action.id ? { ...c, labelT: action.labelT } : c
+        ),
+      };
+    }
     case 'UPDATE_TEXT': {
       return {
         ...state,
@@ -475,7 +483,7 @@ const MUTATION_ACTIONS = new Set([
   'RESIZE_FRAME', 'SET_COMPONENT_FRAME', 'SET_FRAME_PARENT',
   'UPDATE_TABLE_HEADER', 'ADD_TABLE_ROW', 'REMOVE_TABLE_ROW',
   'RENAME_TABLE_ROW', 'CYCLE_TABLE_KEY',
-  'UPDATE_CONNECTION_CARDINALITY', 'UPDATE_CONNECTION_LABEL',
+  'UPDATE_CONNECTION_CARDINALITY', 'UPDATE_CONNECTION_LABEL', 'UPDATE_CONNECTION_LABEL_T',
   'UPDATE_TEXT', 'UPDATE_TEXT_STYLE',
   'UPDATE_SHAPE_STYLE', 'UPDATE_SHAPE_KIND', 'PASTE',
 ]);
@@ -660,6 +668,10 @@ export function usePlacedComponents() {
     dispatch({ type: 'UPDATE_CONNECTION_LABEL', id, label });
   }, []);
 
+  const updateConnectionLabelT = useCallback((id: string, labelT: number) => {
+    dispatch({ type: 'UPDATE_CONNECTION_LABEL_T', id, labelT });
+  }, []);
+
   const updateText = useCallback((id: string, text: string) => {
     dispatch({ type: 'UPDATE_TEXT', id, text });
   }, []);
@@ -729,6 +741,7 @@ export function usePlacedComponents() {
     cycleTableKey: cycleTableKeyAction,
     updateConnectionCardinality,
     updateConnectionLabel,
+    updateConnectionLabelT,
     updateText,
     updateTextStyle,
     updateShapeStyle,

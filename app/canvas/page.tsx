@@ -222,6 +222,7 @@ export default function Page() {
           cycleTableKey={canvasHook.cycleTableKey}
           updateConnectionCardinality={canvasHook.updateConnectionCardinality}
           updateConnectionLabel={canvasHook.updateConnectionLabel}
+          updateConnectionLabelT={canvasHook.updateConnectionLabelT}
           updateText={canvasHook.updateText}
           updateTextStyle={canvasHook.updateTextStyle}
           updateShapeStyle={canvasHook.updateShapeStyle}

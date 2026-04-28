@@ -55,6 +55,8 @@ const connectionSchema = z.object({
   sourcePort: z.unknown(),
   targetPort: z.unknown(),
   cardinality: z.unknown().optional(),
+  label: z.string().max(MAX_STRING).optional(),
+  labelT: z.number().min(0).max(1).optional(),
 });
 
 // Frame — flat x/y/width/height/label/zIndex matching lib/types.ts

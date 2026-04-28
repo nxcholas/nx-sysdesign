@@ -13,6 +13,13 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    version: 'v1.0.4',
+    date: 'April 27, 2026',
+    items: [
+      { type: 'chore', text: 'Component visual consistency improvements' },
+    ],
+  },
+  {
     version: 'v1.0.3',
     date: 'April 26, 2026',
     items: [

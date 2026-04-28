@@ -412,8 +412,57 @@ export function getSmartRoutePoints(
   return removeCollinear([srcPortPos, sa, turn, ta, tgtPortPos]);
 }
 
-/** Returns the point at the midpoint along a polyline (by arc-length). */
-export function polylineMidpoint(points: Point[]): Point {
+/**
+ * Projects a point onto the nearest position on a polyline and returns
+ * the closest point and its arc-length fraction t (0–1).
+ */
+export function polylineProject(
+  points: Point[],
+  pt: Point,
+): { point: Point; t: number } {
+  if (points.length === 0) return { point: pt, t: 0 };
+  if (points.length === 1) return { point: points[0]!, t: 0 };
+
+  let totalLen = 0;
+  const segLens: number[] = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const len = Math.hypot(points[i + 1]!.x - points[i]!.x, points[i + 1]!.y - points[i]!.y);
+    segLens.push(len);
+    totalLen += len;
+  }
+  if (totalLen === 0) return { point: points[0]!, t: 0 };
+
+  let bestDist = Infinity;
+  let bestPoint: Point = points[0]!;
+  let bestArcLen = 0;
+  let arcLen = 0;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i]!;
+    const b = points[i + 1]!;
+    const segLen = segLens[i]!;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    // Parameter t within this segment (clamped 0–1)
+    const segT = segLen === 0 ? 0 : Math.max(0, Math.min(1, ((pt.x - a.x) * dx + (pt.y - a.y) * dy) / (segLen * segLen)));
+    const closest = { x: a.x + segT * dx, y: a.y + segT * dy };
+    const dist = Math.hypot(pt.x - closest.x, pt.y - closest.y);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestPoint = closest;
+      bestArcLen = arcLen + segT * segLen;
+    }
+    arcLen += segLen;
+  }
+
+  return { point: bestPoint, t: Math.max(0, Math.min(1, bestArcLen / totalLen)) };
+}
+
+/**
+ * Returns the point at arc-length fraction `frac` (0–1) along a polyline.
+ * Defaults to 0.5 (midpoint).
+ */
+export function polylineMidpoint(points: Point[], frac = 0.5): Point {
   if (points.length === 0) return { x: 0, y: 0 };
   if (points.length === 1) return points[0]!;
 
@@ -422,7 +471,7 @@ export function polylineMidpoint(points: Point[]): Point {
     totalLen += Math.hypot(points[i + 1]!.x - points[i]!.x, points[i + 1]!.y - points[i]!.y);
   }
 
-  let remaining = totalLen / 2;
+  let remaining = totalLen * Math.max(0, Math.min(1, frac));
   for (let i = 0; i < points.length - 1; i++) {
     const segLen = Math.hypot(points[i + 1]!.x - points[i]!.x, points[i + 1]!.y - points[i]!.y);
     if (remaining <= segLen) {

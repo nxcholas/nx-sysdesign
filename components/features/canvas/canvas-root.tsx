@@ -24,7 +24,7 @@ import type {
   ShapeStyle,
 } from '@/lib/types';
 import { isPointInsideFrame } from '@/lib/frame-utils';
-import { getSmartRoutePoints, pointsToPath, oppositePort, truncatePolyline, PORT_HIT_RADIUS, isRowPort } from '@/lib/connection-utils';
+import { getSmartRoutePoints, pointsToPath, oppositePort, truncatePolyline, PORT_HIT_RADIUS, isRowPort, polylineMidpoint, polylineProject } from '@/lib/connection-utils';
 import { getCardinalityGlyphPaths } from '@/lib/cardinality-glyph';
 import { buildFlowChains, composeFlowPath, FLOW_SPEED } from '@/lib/flow-chain';
 import { CanvasViewport } from './canvas-viewport';
@@ -104,6 +104,7 @@ export interface CanvasRootProps {
   cycleTableKey: (id: string, rowId: string) => void;
   updateConnectionCardinality: (id: string, cardinality: Cardinality) => void;
   updateConnectionLabel: (id: string, label: string) => void;
+  updateConnectionLabelT: (id: string, labelT: number) => void;
   updateText: (id: string, text: string) => void;
   updateTextStyle: (id: string, style: Partial<TextStyle>) => void;
   updateShapeStyle: (id: string, style: Partial<ShapeStyle>) => void;
@@ -158,6 +159,7 @@ export function CanvasRoot(props: CanvasRootProps) {
     cycleTableKey,
     updateConnectionCardinality,
     updateConnectionLabel,
+    updateConnectionLabelT,
     updateText,
     updateTextStyle,
     updateShapeStyle,
@@ -187,6 +189,8 @@ export function CanvasRoot(props: CanvasRootProps) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [flowVisible, setFlowVisible] = useState(true);
   const [labelEditingId, setLabelEditingId] = useState<string | null>(null);
+  const [labelDraggingId, setLabelDraggingId] = useState<string | null>(null);
+  const labelDragRef = useRef<{ connId: string; canvasPoints: { x: number; y: number }[] } | null>(null);
 
   const { handleDragOver, handleDrop } = useDragDrop();
 
@@ -652,6 +656,10 @@ export function CanvasRoot(props: CanvasRootProps) {
           x: pt.x * scale + translateX,
           y: pt.y * scale + translateY,
         });
+        const toCanvas = (screenX: number, screenY: number) => ({
+          x: (screenX - translateX) / scale,
+          y: (screenY - translateY) / scale,
+        });
         type EntityRect = { id: string; x: number; y: number; width: number; height: number };
         const entityMap = new Map<string, EntityRect>([
           ...placedComponents.map(c => [c.id, c] as [string, EntityRect]),
@@ -664,15 +672,12 @@ export function CanvasRoot(props: CanvasRootProps) {
             width="100%"
             height="100%"
           >
-            {/* Static connection lines with clickable hit areas */}
+            {/* ── Pass 1: connection lines + cardinality glyphs (no labels) ── */}
             {connections.map((conn) => {
               const source = entityMap.get(conn.sourceId);
               const target = entityMap.get(conn.targetId);
               if (!source || !target) return null;
-              // Frames are transparent containers — routes can pass through them freely.
-              // Only placed components (visual blocks) count as routing obstacles.
               const obstacles = placedComponents.filter(e => e.id !== conn.sourceId && e.id !== conn.targetId);
-              // Enrich source/target with tableData for row-port geometry
               const sourceComp = placedComponents.find(c => c.id === conn.sourceId);
               const targetComp = placedComponents.find(c => c.id === conn.targetId);
               const sourceWithTable = sourceComp ? sourceComp : source;
@@ -680,22 +685,13 @@ export function CanvasRoot(props: CanvasRootProps) {
               const points = getSmartRoutePoints(sourceWithTable, targetWithTable, conn.sourcePort, conn.targetPort, obstacles);
               const screenPoints = points.map(toScreen);
               const pathD = pointsToPath(screenPoints);
-              // Truncate hit area near ports so port dots can receive pointer events
               const hitPoints = truncatePolyline(screenPoints, PORT_HIT_RADIUS * scale);
               const hitPathD = pointsToPath(hitPoints);
               const isConnSelected = conn.id === selectedConnectionId;
               const strokeColor = isConnSelected ? '#3b82f6' : '#6b7280';
 
-              // Midpoint of screenPoints for label placement
-              const midIdx = Math.floor(screenPoints.length / 2);
-              const midPt = screenPoints.length % 2 === 1
-                ? screenPoints[midIdx]!
-                : { x: (screenPoints[midIdx - 1]!.x + screenPoints[midIdx]!.x) / 2, y: (screenPoints[midIdx - 1]!.y + screenPoints[midIdx]!.y) / 2 };
-
-              // Cardinality glyphs (only when both ports are row ports with cardinality set)
               const cardinalityGlyphs: React.ReactNode[] = [];
               if (conn.cardinality && screenPoints.length >= 2) {
-                // Source end: first point is anchor, second defines direction
                 const srcAnchor = screenPoints[0]!;
                 const srcNext = screenPoints[1]!;
                 const srcDx = srcNext.x - srcAnchor.x;
@@ -703,14 +699,12 @@ export function CanvasRoot(props: CanvasRootProps) {
                 const srcLen = Math.sqrt(srcDx * srcDx + srcDy * srcDy);
                 if (srcLen > 0) {
                   const srcDir = { dx: srcDx / srcLen, dy: srcDy / srcLen };
-                  const srcPaths = getCardinalityGlyphPaths(conn.cardinality.source, srcAnchor, srcDir);
-                  srcPaths.forEach((d, i) => {
+                  getCardinalityGlyphPaths(conn.cardinality.source, srcAnchor, srcDir).forEach((d, i) => {
                     cardinalityGlyphs.push(
                       <path key={`src-${i}`} d={d} fill="none" stroke={strokeColor} strokeWidth={1.5} strokeLinecap="round" style={{ pointerEvents: 'none' }} />
                     );
                   });
                 }
-                // Target end: last point is anchor, second-to-last defines direction
                 const tgtAnchor = screenPoints[screenPoints.length - 1]!;
                 const tgtPrev = screenPoints[screenPoints.length - 2]!;
                 const tgtDx = tgtPrev.x - tgtAnchor.x;
@@ -718,8 +712,7 @@ export function CanvasRoot(props: CanvasRootProps) {
                 const tgtLen = Math.sqrt(tgtDx * tgtDx + tgtDy * tgtDy);
                 if (tgtLen > 0) {
                   const tgtDir = { dx: tgtDx / tgtLen, dy: tgtDy / tgtLen };
-                  const tgtPaths = getCardinalityGlyphPaths(conn.cardinality.target, tgtAnchor, tgtDir);
-                  tgtPaths.forEach((d, i) => {
+                  getCardinalityGlyphPaths(conn.cardinality.target, tgtAnchor, tgtDir).forEach((d, i) => {
                     cardinalityGlyphs.push(
                       <path key={`tgt-${i}`} d={d} fill="none" stroke={strokeColor} strokeWidth={1.5} strokeLinecap="round" style={{ pointerEvents: 'none' }} />
                     );
@@ -727,18 +720,8 @@ export function CanvasRoot(props: CanvasRootProps) {
                 }
               }
 
-              const isEditingLabel = labelEditingId === conn.id;
-              const PILL_PX = 8;
-              const PILL_PY = 4;
-              const FONT_SIZE = 11;
-              // Approximate text width for pill sizing (7px per char at 11px font)
-              const labelCharWidth = (conn.label?.length ?? 0) * 7;
-              const pillW = Math.max(labelCharWidth + PILL_PX * 2, 36);
-              const pillH = FONT_SIZE + PILL_PY * 2;
-
               return (
-                <g key={conn.id}>
-                  {/* Invisible wide hit area for click/double-click — trimmed near ports */}
+                <g key={`path-${conn.id}`}>
                   <path
                     d={hitPathD}
                     fill="none"
@@ -757,7 +740,6 @@ export function CanvasRoot(props: CanvasRootProps) {
                       setLabelEditingId(conn.id);
                     }}
                   />
-                  {/* Visible connection line */}
                   <path
                     d={pathD}
                     fill="none"
@@ -766,11 +748,65 @@ export function CanvasRoot(props: CanvasRootProps) {
                     strokeLinecap="round"
                     style={{ pointerEvents: 'none' }}
                   />
-                  {/* Cardinality glyphs */}
                   {cardinalityGlyphs}
-                  {/* Label pill — shown when label is set and not currently editing */}
+                </g>
+              );
+            })}
+            {/* ── Pass 2: labels — rendered after all paths so they are always on top ── */}
+            {connections.map((conn) => {
+              if (!conn.label && labelEditingId !== conn.id) return null;
+              const source = entityMap.get(conn.sourceId);
+              const target = entityMap.get(conn.targetId);
+              if (!source || !target) return null;
+              const obstacles = placedComponents.filter(e => e.id !== conn.sourceId && e.id !== conn.targetId);
+              const sourceComp = placedComponents.find(c => c.id === conn.sourceId);
+              const targetComp = placedComponents.find(c => c.id === conn.targetId);
+              const sourceWithTable = sourceComp ? sourceComp : source;
+              const targetWithTable = targetComp ? targetComp : target;
+              // Canvas-space route points (used for arc-length midpoint + projection)
+              const canvasPoints = getSmartRoutePoints(sourceWithTable, targetWithTable, conn.sourcePort, conn.targetPort, obstacles);
+
+              // Bug 1 fix: arc-length midpoint using labelT (or 0.5 default)
+              const labelT = conn.labelT ?? 0.5;
+              const canvasMid = polylineMidpoint(canvasPoints, labelT);
+              const midPt = toScreen(canvasMid);
+
+              const isEditingLabel = labelEditingId === conn.id;
+              const isDraggingLabel = labelDraggingId === conn.id;
+              const PILL_PX = 8;
+              const PILL_PY = 4;
+              const FONT_SIZE = 11;
+              const labelCharWidth = (conn.label?.length ?? 0) * 7;
+              const pillW = Math.max(labelCharWidth + PILL_PX * 2, 36);
+              const pillH = FONT_SIZE + PILL_PY * 2;
+
+              return (
+                <g key={`label-${conn.id}`}>
                   {conn.label && !isEditingLabel && (
-                    <g style={{ pointerEvents: 'none' }}>
+                    <g
+                      style={{ pointerEvents: 'auto', cursor: isDraggingLabel ? 'grabbing' : 'grab' }}
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        setLabelDraggingId(conn.id);
+                        labelDragRef.current = { connId: conn.id, canvasPoints };
+                        (e.currentTarget as SVGGElement).setPointerCapture(e.pointerId);
+                      }}
+                      onPointerMove={(e) => {
+                        if (!labelDragRef.current || labelDragRef.current.connId !== conn.id) return;
+                        const rect = canvasRef.current?.getBoundingClientRect();
+                        if (!rect) return;
+                        const canvasCursor = toCanvas(e.clientX - rect.left, e.clientY - rect.top);
+                        const { t } = polylineProject(labelDragRef.current.canvasPoints, canvasCursor);
+                        updateConnectionLabelT(conn.id, t);
+                      }}
+                      onPointerUp={(e) => {
+                        if (labelDragRef.current?.connId === conn.id) {
+                          (e.currentTarget as SVGGElement).releasePointerCapture(e.pointerId);
+                          labelDragRef.current = null;
+                          setLabelDraggingId(null);
+                        }
+                      }}
+                    >
                       <rect
                         x={midPt.x - pillW / 2}
                         y={midPt.y - pillH / 2}
@@ -778,7 +814,7 @@ export function CanvasRoot(props: CanvasRootProps) {
                         height={pillH}
                         rx={4}
                         fill="#1e2028"
-                        stroke="#374151"
+                        stroke={isDraggingLabel ? '#3b82f6' : '#374151'}
                         strokeWidth={1}
                       />
                       <text
@@ -789,12 +825,12 @@ export function CanvasRoot(props: CanvasRootProps) {
                         fontSize={FONT_SIZE}
                         fontFamily="Inter, ui-sans-serif, system-ui, sans-serif"
                         fill="#e5e7eb"
+                        style={{ userSelect: 'none' }}
                       >
                         {conn.label}
                       </text>
                     </g>
                   )}
-                  {/* Inline label input — shown when editing */}
                   {isEditingLabel && (
                     <foreignObject
                       x={midPt.x - 100}

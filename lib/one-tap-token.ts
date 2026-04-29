@@ -15,7 +15,9 @@ export function verifyOneTapToken(token: string): string | null {
     if (!secret) return null;
     const parts = token.split(':');
     if (parts.length !== 3) return null;
-    const [userId, expiresAtStr, sig] = parts;
+    const userId = parts[0]!;
+    const expiresAtStr = parts[1]!;
+    const sig = parts[2]!;
     const expiresAt = parseInt(expiresAtStr, 10);
     if (isNaN(expiresAt) || Date.now() > expiresAt) return null;
     const payload = `${userId}:${expiresAt}`;

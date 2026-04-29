@@ -1,23 +1,54 @@
 import NextAuth from 'next-auth';
 import GitHub from 'next-auth/providers/github';
+import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
+import { verifyOneTapToken } from '@/app/api/auth/one-tap/route';
+
+if (!process.env.AUTH_GOOGLE_ID || !process.env.AUTH_GOOGLE_SECRET) {
+  throw new Error('Missing required env vars: AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET must be set');
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
   providers: [
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID!,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+      allowDangerousEmailAccountLinking: true,
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email?.toLowerCase() ?? null,
+          image: profile.picture,
+        };
+      },
+    }),
     GitHub({
       clientId: process.env.AUTH_GITHUB_ID!,
       clientSecret: process.env.AUTH_GITHUB_SECRET!,
+      allowDangerousEmailAccountLinking: true,
     }),
     Credentials({
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        onetapToken: { label: 'One Tap Token', type: 'text' },
       },
       async authorize(credentials) {
+        // One Tap path: verify the HMAC-signed token issued by /api/auth/one-tap.
+        // This prevents a client from supplying an arbitrary userId directly.
+        if (credentials?.onetapToken) {
+          const userId = verifyOneTapToken(credentials.onetapToken as string);
+          if (!userId) return null;
+          const user = await db.user.findUnique({ where: { id: userId } });
+          if (!user) return null;
+          return { id: user.id, email: user.email, name: user.name, image: user.image };
+        }
+
         if (!credentials?.email || !credentials?.password) return null;
 
         const normalizedEmail = (credentials.email as string).toLowerCase().trim();
@@ -54,7 +85,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // On first GitHub OAuth sign-in, account is present. Stamp emailVerified directly
       // on the token and persist it to the DB in the same step, so the token is always
       // correct regardless of whether subsequent jwt calls have account available.
-      if (account?.provider === 'github' && token.id) {
+      if ((account?.provider === 'github' || account?.provider === 'google') && token.id) {
         const now = new Date();
         await db.user.update({
           where: { id: token.id as string },
@@ -94,5 +125,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   pages: {
     signIn: '/sign-in',
+    error: '/auth-error',
   },
 });

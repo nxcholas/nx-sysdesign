@@ -38,13 +38,22 @@ const emailRatelimit = new Ratelimit({
   prefix: 'rl:email',
 });
 
+// Strict limiter for One Tap credential submission: 10 requests per 60 seconds per IP.
+// Tighter than the general API limit since this is an auth credential endpoint.
+const oneTapRatelimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(10, '60 s'),
+  analytics: false,
+  prefix: 'rl:onetap',
+});
+
 // App-level auth endpoints that accept an email body (not NextAuth internals)
 const EMAIL_KEYED_PATHS = ['/api/register', '/api/auth/forgot-password'];
 
 function isNextAuthPath(pathname: string): boolean {
   // Excludes all /api/auth/* except our own app-level routes under that prefix.
   // Our app routes: /api/auth/verify-code, /api/auth/resend-verification,
-  // /api/auth/forgot-password, /api/auth/reset-password
+  // /api/auth/forgot-password, /api/auth/reset-password, /api/auth/one-tap
   // NextAuth internals: /api/auth/session, /api/auth/csrf, /api/auth/signout,
   // /api/auth/callback/*, /api/auth/providers, /api/auth/[...nextauth]
   const NEXTAUTH_INTERNAL = [
@@ -101,6 +110,13 @@ export async function middleware(req: NextRequest) {
   }
 
   const ip = getIp(req);
+
+  // One Tap credential endpoint: stricter auth-specific limiter
+  if (pathname === '/api/auth/one-tap') {
+    const { success, limit, remaining, reset } = await oneTapRatelimit.limit(ip);
+    if (!success) return rateLimitResponse(limit, remaining, reset);
+    return NextResponse.next();
+  }
 
   // Diagram endpoints: dedicated higher-throughput limiter
   if (isDiagramPath(pathname)) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -15,7 +15,7 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   Default: 'Something went wrong during sign-in. Please try again.',
 };
 
-export default function SignInPage() {
+function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlError = searchParams.get('error');
@@ -201,5 +201,13 @@ export default function SignInPage() {
       </div>
     </main>
     </>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense>
+      <SignInContent />
+    </Suspense>
   );
 }

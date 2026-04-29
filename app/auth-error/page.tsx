@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { BrandLockup } from '@/components/ui/brand-lockup';
 
-// These errors mean the user cancelled or denied access — redirect silently back to sign-in
 const REDIRECT_ERRORS = new Set(['AccessDenied', 'OAuthCallbackError', 'OAuthSignin', 'Callback']);
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -15,7 +14,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   Default: 'Something went wrong during sign-in. Please try again.',
 };
 
-export default function AuthErrorPage() {
+function AuthErrorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const error = searchParams.get('error') ?? 'Default';
@@ -63,5 +62,13 @@ export default function AuthErrorPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function AuthErrorPage() {
+  return (
+    <Suspense>
+      <AuthErrorContent />
+    </Suspense>
   );
 }

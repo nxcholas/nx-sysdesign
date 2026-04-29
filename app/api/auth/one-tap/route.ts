@@ -1,44 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
-import { createHmac } from 'crypto';
 import { db } from '@/lib/db';
+import { signOneTapToken } from '@/lib/one-tap-token';
 
 const GOOGLE_JWKS = createRemoteJWKSet(
   new URL('https://www.googleapis.com/oauth2/v3/certs')
 );
-
-// Signs a short-lived token binding userId + expiry so the Credentials authorize()
-// can trust it came from this server and not from a client-supplied userId.
-function signOneTapToken(userId: string): string {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) throw new Error('AUTH_SECRET is not set');
-  const expiresAt = Date.now() + 30_000; // 30 second window
-  const payload = `${userId}:${expiresAt}`;
-  const sig = createHmac('sha256', secret).update(payload).digest('hex');
-  return `${payload}:${sig}`;
-}
-
-export function verifyOneTapToken(token: string): string | null {
-  try {
-    const secret = process.env.AUTH_SECRET;
-    if (!secret) return null;
-    const parts = token.split(':');
-    if (parts.length !== 3) return null;
-    const [userId, expiresAtStr, sig] = parts;
-    const expiresAt = parseInt(expiresAtStr, 10);
-    if (isNaN(expiresAt) || Date.now() > expiresAt) return null;
-    const payload = `${userId}:${expiresAt}`;
-    const expected = createHmac('sha256', secret).update(payload).digest('hex');
-    // Constant-time comparison to prevent timing attacks
-    if (sig.length !== expected.length) return null;
-    let diff = 0;
-    for (let i = 0; i < sig.length; i++) diff |= sig.charCodeAt(i) ^ expected.charCodeAt(i);
-    if (diff !== 0) return null;
-    return userId;
-  } catch {
-    return null;
-  }
-}
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -69,7 +36,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid credential.' }, { status: 401 });
   }
 
-  // Validate required fields before trusting the payload
   if (typeof payload.email_verified !== 'boolean' || !payload.email_verified) {
     return NextResponse.json({ error: 'Google email not verified.' }, { status: 401 });
   }
@@ -90,7 +56,6 @@ export async function POST(req: Request) {
 
   const sub = payload.sub.trim();
 
-  // Upsert user — find by email or create, then ensure Account row exists for google provider
   const user = await db.user.upsert({
     where: { email },
     create: {
@@ -105,7 +70,6 @@ export async function POST(req: Request) {
     },
   });
 
-  // Ensure an Account row exists for this Google sub so the OAuth flow stays consistent
   await db.account.upsert({
     where: {
       provider_providerAccountId: {

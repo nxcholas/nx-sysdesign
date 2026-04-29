@@ -5,7 +5,7 @@ import Credentials from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
-import { verifyOneTapToken } from '@/app/api/auth/one-tap/route';
+import { verifyOneTapToken } from '@/lib/one-tap-token';
 
 if (!process.env.AUTH_GOOGLE_ID || !process.env.AUTH_GOOGLE_SECRET) {
   throw new Error('Missing required env vars: AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET must be set');

@@ -17,10 +17,13 @@ import { isPointInsideFrame } from '@/lib/frame-utils';
 interface PlacedComponentItemProps {
   component: PlacedComponent;
   isSelected: boolean;
+  selectedIds: string[];
+  allComponents: PlacedComponent[];
   transform: CanvasTransform;
   autoFocus?: boolean;
   onSelect: (id: string | null) => void;
   onMove: (id: string, x: number, y: number) => void;
+  onMoveMany: (moves: { id: string; x: number; y: number }[]) => void;
   onRemove: (id: string) => void;
   onResize: (id: string, width: number, height: number) => void;
   onResizeWithMove?: (id: string, x: number, y: number, width: number, height: number) => void;
@@ -144,10 +147,13 @@ const PORT_SIDES: EdgePortSide[] = ['top', 'right', 'bottom', 'left'];
 export function PlacedComponentItem({
   component,
   isSelected,
+  selectedIds,
+  allComponents,
   transform,
   autoFocus,
   onSelect,
   onMove,
+  onMoveMany,
   onRemove,
   onResize,
   onResizeWithMove,
@@ -172,8 +178,8 @@ export function PlacedComponentItem({
   const dragStartRef = useRef<{
     pointerX: number;
     pointerY: number;
-    compX: number;
-    compY: number;
+    // Start positions for all components being dragged (single or multi)
+    starts: { id: string; x: number; y: number }[];
   } | null>(null);
   const hasCapturedRef = useRef(false);
 
@@ -187,16 +193,26 @@ export function PlacedComponentItem({
       if (isConnectionDragging) return;
       if (isPanActive) return;
       e.stopPropagation();
-      onSelect(component.id);
+      // Only reset selection to this component when it isn't already part of a multi-selection.
+      // Preserving the selection lets the user drag the whole group.
+      if (!isSelected || selectedIds.length <= 1) {
+        onSelect(component.id);
+      }
       hasCapturedRef.current = false;
+      // Capture start positions for all currently selected components so we can
+      // move them all together during the drag.
+      const dragIds = isSelected && selectedIds.length > 1 ? selectedIds : [component.id];
+      const starts = dragIds.flatMap((id) => {
+        const comp = allComponents.find((c) => c.id === id);
+        return comp ? [{ id, x: comp.x, y: comp.y }] : [];
+      });
       dragStartRef.current = {
         pointerX: e.clientX,
         pointerY: e.clientY,
-        compX: component.x,
-        compY: component.y,
+        starts,
       };
     },
-    [component.id, component.x, component.y, onSelect, isConnectionDragging, isPanActive]
+    [component.id, isSelected, selectedIds, allComponents, onSelect, isConnectionDragging, isPanActive]
   );
 
   const handlePointerMove = useCallback(
@@ -212,36 +228,51 @@ export function PlacedComponentItem({
       }
       const dx = (e.clientX - dragStartRef.current.pointerX) / transform.scale;
       const dy = (e.clientY - dragStartRef.current.pointerY) / transform.scale;
-      const newX = snapToGrid(dragStartRef.current.compX + dx);
-      const newY = snapToGrid(dragStartRef.current.compY + dy);
-      onMove(component.id, newX, newY);
 
-      // Highlight frame under component center (visual feedback only)
-      const center = { x: newX + component.width / 2, y: newY + component.height / 2 };
-      const targetFrame = frames.find((f) => isPointInsideFrame(center, f));
-      onHighlightFrame(targetFrame?.id ?? null);
+      const { starts } = dragStartRef.current;
+      if (starts.length > 1) {
+        onMoveMany(starts.map((s) => ({
+          id: s.id,
+          x: snapToGrid(s.x + dx),
+          y: snapToGrid(s.y + dy),
+        })));
+      } else {
+        const s = starts[0]!;
+        const newX = snapToGrid(s.x + dx);
+        const newY = snapToGrid(s.y + dy);
+        onMove(component.id, newX, newY);
+
+        // Highlight frame under component center (visual feedback only)
+        const center = { x: newX + component.width / 2, y: newY + component.height / 2 };
+        const targetFrame = frames.find((f) => isPointInsideFrame(center, f));
+        onHighlightFrame(targetFrame?.id ?? null);
+      }
     },
-    [component.id, component.width, component.height, transform.scale, onMove, frames, onHighlightFrame, onBeginDragHistory]
+    [component.id, component.width, component.height, transform.scale, onMove, onMoveMany, frames, onHighlightFrame, onBeginDragHistory]
   );
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     if (dragStartRef.current) {
-      // Compute final center position for frame assignment
-      const dx = (e.clientX - dragStartRef.current.pointerX) / transform.scale;
-      const dy = (e.clientY - dragStartRef.current.pointerY) / transform.scale;
-      const newX = snapToGrid(dragStartRef.current.compX + dx);
-      const newY = snapToGrid(dragStartRef.current.compY + dy);
-      const center = { x: newX + component.width / 2, y: newY + component.height / 2 };
+      const { starts } = dragStartRef.current;
+      // Only update frame membership for single-component drags
+      if (starts.length === 1) {
+        const dx = (e.clientX - dragStartRef.current.pointerX) / transform.scale;
+        const dy = (e.clientY - dragStartRef.current.pointerY) / transform.scale;
+        const s = starts[0]!;
+        const newX = snapToGrid(s.x + dx);
+        const newY = snapToGrid(s.y + dy);
+        const center = { x: newX + component.width / 2, y: newY + component.height / 2 };
 
-      if (!component.frameId) {
-        const targetFrame = frames.find((f) => isPointInsideFrame(center, f));
-        if (targetFrame) {
-          onSetComponentFrame(component.id, targetFrame.id);
-        }
-      } else {
-        const parentFrame = frames.find((f) => f.id === component.frameId);
-        if (parentFrame && !isPointInsideFrame(center, parentFrame)) {
-          onSetComponentFrame(component.id, null);
+        if (!component.frameId) {
+          const targetFrame = frames.find((f) => isPointInsideFrame(center, f));
+          if (targetFrame) {
+            onSetComponentFrame(component.id, targetFrame.id);
+          }
+        } else {
+          const parentFrame = frames.find((f) => f.id === component.frameId);
+          if (parentFrame && !isPointInsideFrame(center, parentFrame)) {
+            onSetComponentFrame(component.id, null);
+          }
         }
       }
 

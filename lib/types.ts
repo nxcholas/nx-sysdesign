@@ -183,6 +183,7 @@ export interface Connection {
 export type CanvasAction =
   | { type: 'ADD'; payload: Omit<PlacedComponent, 'id' | 'zIndex'> }
   | { type: 'MOVE'; id: string; x: number; y: number }
+  | { type: 'MOVE_MANY'; moves: { id: string; x: number; y: number }[] }
   | { type: 'REMOVE'; id: string }
   | { type: 'SELECT'; id: string | null }
   | { type: 'SELECT_MANY'; ids: string[]; frameId?: string | null }

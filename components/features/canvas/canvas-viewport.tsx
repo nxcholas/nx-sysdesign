@@ -9,6 +9,7 @@ interface CanvasViewportProps {
   selectedIds: string[];
   onSelect: (id: string | null) => void;
   onMove: (id: string, x: number, y: number) => void;
+  onMoveMany: (moves: { id: string; x: number; y: number }[]) => void;
   onRemove: (id: string) => void;
   onResize: (id: string, width: number, height: number) => void;
   onResizeWithMove?: (id: string, x: number, y: number, width: number, height: number) => void;
@@ -48,6 +49,7 @@ export function CanvasViewport({
   selectedIds,
   onSelect,
   onMove,
+  onMoveMany,
   onRemove,
   onResize,
   onResizeWithMove,
@@ -125,9 +127,12 @@ export function CanvasViewport({
           key={component.id}
           component={component}
           isSelected={selectedIds.includes(component.id)}
+          selectedIds={selectedIds}
+          allComponents={placedComponents}
           transform={transform}
           onSelect={onSelect}
           onMove={onMove}
+          onMoveMany={onMoveMany}
           onRemove={onRemove}
           onResize={onResize}
           onResizeWithMove={onResizeWithMove}

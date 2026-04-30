@@ -68,6 +68,7 @@ export interface CanvasRootProps {
   // Callbacks — component
   addComponent: (kind: PaletteItemKind, x: number, y: number, width: number, height: number, frameId?: string, extras?: Partial<Pick<PlacedComponent, 'text' | 'textStyle' | 'shapeStyle'>>) => void;
   moveComponent: (id: string, x: number, y: number) => void;
+  moveMany: (moves: { id: string; x: number; y: number }[]) => void;
   removeComponent: (id: string) => void;
   selectComponent: (id: string | null) => void;
   resizeComponent: (id: string, width: number, height: number) => void;
@@ -137,6 +138,7 @@ export function CanvasRoot(props: CanvasRootProps) {
     exportLayerRef,
     addComponent,
     moveComponent,
+    moveMany,
     removeComponent,
     selectComponent,
     resizeComponent,
@@ -642,6 +644,7 @@ export function CanvasRoot(props: CanvasRootProps) {
         selectedIds={selectedIds}
         onSelect={selectComponent}
         onMove={moveComponent}
+        onMoveMany={moveMany}
         onRemove={removeComponent}
         onResize={resizeComponent}
         onResizeWithMove={(id, x, y, w, h) => { resizeComponent(id, w, h); moveComponent(id, x, y); }}

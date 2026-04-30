@@ -195,6 +195,7 @@ export default function Page() {
           selectedFrameId={canvasHook.selectedFrameId}
           addComponent={canvasHook.addComponent}
           moveComponent={canvasHook.moveComponent}
+          moveMany={canvasHook.moveMany}
           removeComponent={canvasHook.removeComponent}
           selectComponent={canvasHook.selectComponent}
           resizeComponent={canvasHook.resizeComponent}

@@ -61,6 +61,16 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
       );
       return { ...state, placedComponents: updated };
     }
+    case 'MOVE_MANY': {
+      const moveMap = new Map(action.moves.map((m) => [m.id, m]));
+      return {
+        ...state,
+        placedComponents: state.placedComponents.map((c) => {
+          const m = moveMap.get(c.id);
+          return m ? { ...c, x: m.x, y: m.y } : c;
+        }),
+      };
+    }
     case 'REMOVE': {
       const remaining = state.placedComponents.filter((c) => c.id !== action.id);
       return {
@@ -485,7 +495,7 @@ const initialState: CanvasState = {
 };
 
 const MUTATION_ACTIONS = new Set([
-  'ADD', 'MOVE', 'REMOVE', 'REMOVE_MANY', 'RESIZE', 'ALIGN_COMPONENTS',
+  'ADD', 'MOVE', 'MOVE_MANY', 'REMOVE', 'REMOVE_MANY', 'RESIZE', 'ALIGN_COMPONENTS',
   'ADD_CONNECTION', 'REMOVE_CONNECTION',
   'ADD_FRAME', 'MOVE_FRAME', 'REMOVE_FRAME', 'RENAME_FRAME', 'RENAME_COMPONENT',
   'RESIZE_FRAME', 'SET_COMPONENT_FRAME', 'SET_FRAME_PARENT',
@@ -547,6 +557,10 @@ export function usePlacedComponents() {
 
   const moveComponent = useCallback((id: string, x: number, y: number) => {
     dispatch({ type: 'MOVE', id, x, y });
+  }, []);
+
+  const moveMany = useCallback((moves: { id: string; x: number; y: number }[]) => {
+    dispatch({ type: 'MOVE_MANY', moves });
   }, []);
 
   const removeComponent = useCallback((id: string) => {
@@ -724,6 +738,7 @@ export function usePlacedComponents() {
     selectedFrameId: state.selectedFrameId,
     addComponent,
     moveComponent,
+    moveMany,
     removeComponent,
     selectComponent,
     resizeComponent,

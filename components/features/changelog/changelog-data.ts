@@ -13,6 +13,22 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    version: 'v1.0.8',
+    date: 'April 30, 2026',
+    items: [
+      { type: 'feat', text: 'Questions widget — ask us anything directly from the landing page' },
+      { type: 'feat', text: 'Bug report widget — report canvas issues without leaving the app' },
+    ],
+  },
+  {
+    version: 'v1.0.7',
+    date: 'April 29, 2026',
+    items: [
+      { type: 'feat', text: 'Google sign-in support' },
+      { type: 'fix', text: 'Authentication flow reliability improvements' },
+    ],
+  },
+  {
     version: 'v1.0.6',
     date: 'April 28, 2026',
     items: [

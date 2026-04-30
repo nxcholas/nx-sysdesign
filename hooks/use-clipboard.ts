@@ -16,6 +16,7 @@ export function useClipboard(
   getFrames: () => Frame[],
   getSelectedFrameId: () => string | null,
   onPaste: (components: PlacedComponent[], connections: Connection[], frames: Frame[]) => void,
+  onCopied?: (frameIds: string[]) => void,
 ) {
   const clipRef = useRef<ClipboardSnapshot | null>(null);
   const pasteCountRef = useRef(0);
@@ -59,7 +60,10 @@ export function useClipboard(
 
     clipRef.current = { components, connections, frames };
     pasteCountRef.current = 0;
-  }, [getSelectedIds, getSelectedFrameId, getComponents, getConnections, getFrames]);
+    if (onCopied && frames.length > 0) {
+      onCopied(frames.map((f) => f.id));
+    }
+  }, [getSelectedIds, getSelectedFrameId, getComponents, getConnections, getFrames, onCopied]);
 
   const paste = useCallback(() => {
     const clip = clipRef.current;

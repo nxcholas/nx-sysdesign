@@ -38,6 +38,7 @@ interface CanvasViewportProps {
   onBeginDragHistory: () => void;
   onEndDragHistory: () => void;
   isPanActive: boolean;
+  copiedFrameIds: Set<string>;
 }
 
 
@@ -76,6 +77,7 @@ export function CanvasViewport({
   onBeginDragHistory,
   onEndDragHistory,
   isPanActive,
+  copiedFrameIds,
 }: CanvasViewportProps) {
   const { scale, translateX, translateY } = transform;
 
@@ -113,6 +115,7 @@ export function CanvasViewport({
           connectionDragState={connectionDragState}
           highlightedPorts={highlightedPorts}
           isPanActive={isPanActive}
+          isCopied={copiedFrameIds.has(frame.id)}
         />
       ))}
 

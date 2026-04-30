@@ -209,6 +209,8 @@ export function CanvasRoot(props: CanvasRootProps) {
   const [flowVisible, setFlowVisible] = useState(true);
   const [labelEditingId, setLabelEditingId] = useState<string | null>(null);
   const [labelDraggingId, setLabelDraggingId] = useState<string | null>(null);
+  const [copiedFrameIds, setCopiedFrameIds] = useState<Set<string>>(new Set());
+  const copiedFrameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const labelDragRef = useRef<{ connId: string; canvasPoints: { x: number; y: number }[] } | null>(null);
 
   const { handleDragOver, handleDrop } = useDragDrop();
@@ -229,6 +231,12 @@ export function CanvasRoot(props: CanvasRootProps) {
   const selectedFrameIdRef = useRef(selectedFrameId);
   selectedFrameIdRef.current = selectedFrameId;
 
+  const handleCopied = useCallback((frameIds: string[]) => {
+    setCopiedFrameIds(new Set(frameIds));
+    if (copiedFrameTimerRef.current) clearTimeout(copiedFrameTimerRef.current);
+    copiedFrameTimerRef.current = setTimeout(() => setCopiedFrameIds(new Set()), 600);
+  }, []);
+
   const { copy: clipboardCopy, paste: clipboardPaste } = useClipboard(
     () => selectedIdsRef.current,
     () => placedComponentsRef.current,
@@ -236,6 +244,7 @@ export function CanvasRoot(props: CanvasRootProps) {
     () => framesRef.current,
     () => selectedFrameIdRef.current,
     pasteComponents,
+    handleCopied,
   );
 
   const {
@@ -338,10 +347,10 @@ export function CanvasRoot(props: CanvasRootProps) {
         return;
       }
 
-      // Ctrl+C — copy selected components
+      // Ctrl+C — copy selected components and/or selected frame
       if (ctrl && e.key === 'c') {
         if (inInput) return;
-        if (selectedIds.length > 0) {
+        if (selectedIds.length > 0 || selectedFrameId) {
           e.preventDefault();
           clipboardCopy();
         }
@@ -362,6 +371,11 @@ export function CanvasRoot(props: CanvasRootProps) {
       if (inInput) return;
       e.preventDefault();
       if (selectedFrameId) {
+        // Remove child components of the frame first, then the frame itself
+        const childIds = placedComponents
+          .filter((c) => c.frameId === selectedFrameId)
+          .map((c) => c.id);
+        if (childIds.length > 0) removeMany(childIds);
         removeFrame(selectedFrameId);
       } else if (selectedConnectionId) {
         removeConnection(selectedConnectionId);
@@ -672,6 +686,7 @@ export function CanvasRoot(props: CanvasRootProps) {
         onBeginDragHistory={beginDragHistory}
         onEndDragHistory={endDragHistory}
         isPanActive={isPanBlockActive}
+        copiedFrameIds={copiedFrameIds}
       />
 
       {/* Connections overlay — rendered AFTER viewport so hit areas are above frames/components */}

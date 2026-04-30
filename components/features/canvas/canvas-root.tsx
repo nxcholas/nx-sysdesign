@@ -260,7 +260,7 @@ export function CanvasRoot(props: CanvasRootProps) {
     handleSelectionPointerDown,
     handleSelectionPointerMove,
     handleSelectionPointerUp,
-  } = useMarqueeSelect(canvasRef, transform, placedComponents, selectMany, selectComponent, selectConnection);
+  } = useMarqueeSelect(canvasRef, transform, placedComponents, frames, selectMany, selectComponent, selectConnection);
 
   const {
     frameDrawRect,

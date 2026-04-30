@@ -87,7 +87,12 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
       return { ...state, selectedIds: action.id ? [action.id] : [], selectedConnectionId: null, selectedFrameId: null };
     }
     case 'SELECT_MANY': {
-      return { ...state, selectedIds: action.ids, selectedConnectionId: null, selectedFrameId: null };
+      return {
+        ...state,
+        selectedIds: action.ids,
+        selectedConnectionId: null,
+        selectedFrameId: action.frameId !== undefined ? (action.frameId ?? null) : null,
+      };
     }
     case 'SELECT_CONNECTION': {
       return { ...state, selectedConnectionId: action.id, selectedIds: [], selectedFrameId: null };
@@ -593,8 +598,8 @@ export function usePlacedComponents() {
     dispatch({ type: 'SELECT_CONNECTION', id });
   }, []);
 
-  const selectMany = useCallback((ids: string[]) => {
-    dispatch({ type: 'SELECT_MANY', ids });
+  const selectMany = useCallback((ids: string[], frameId?: string | null) => {
+    dispatch({ type: 'SELECT_MANY', ids, frameId });
   }, []);
 
   const removeMany = useCallback((ids: string[]) => {

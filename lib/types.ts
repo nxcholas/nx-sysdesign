@@ -185,7 +185,7 @@ export type CanvasAction =
   | { type: 'MOVE'; id: string; x: number; y: number }
   | { type: 'REMOVE'; id: string }
   | { type: 'SELECT'; id: string | null }
-  | { type: 'SELECT_MANY'; ids: string[] }
+  | { type: 'SELECT_MANY'; ids: string[]; frameId?: string | null }
   | { type: 'SELECT_CONNECTION'; id: string | null }
   | { type: 'RESIZE'; id: string; width: number; height: number }
   | { type: 'ADD_CONNECTION'; payload: Omit<Connection, 'id'> }

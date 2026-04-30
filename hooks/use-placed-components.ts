@@ -61,6 +61,16 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
       );
       return { ...state, placedComponents: updated };
     }
+    case 'MOVE_MANY': {
+      const moveMap = new Map(action.moves.map((m) => [m.id, m]));
+      return {
+        ...state,
+        placedComponents: state.placedComponents.map((c) => {
+          const m = moveMap.get(c.id);
+          return m ? { ...c, x: m.x, y: m.y } : c;
+        }),
+      };
+    }
     case 'REMOVE': {
       const remaining = state.placedComponents.filter((c) => c.id !== action.id);
       return {
@@ -87,7 +97,12 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
       return { ...state, selectedIds: action.id ? [action.id] : [], selectedConnectionId: null, selectedFrameId: null };
     }
     case 'SELECT_MANY': {
-      return { ...state, selectedIds: action.ids, selectedConnectionId: null, selectedFrameId: null };
+      return {
+        ...state,
+        selectedIds: action.ids,
+        selectedConnectionId: null,
+        selectedFrameId: action.frameId !== undefined ? (action.frameId ?? null) : null,
+      };
     }
     case 'SELECT_CONNECTION': {
       return { ...state, selectedConnectionId: action.id, selectedIds: [], selectedFrameId: null };
@@ -439,14 +454,17 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
     case 'PASTE': {
       const baseZ = state.nextZIndex;
       const compsWithZ = action.components.map((c, i) => ({ ...c, zIndex: baseZ + i }));
+      const newFrameCount = action.frames.length;
+      const pastedFrames = action.frames.map((f, i) => ({ ...f, zIndex: baseZ + action.components.length + i }));
       return {
         ...state,
         placedComponents: [...state.placedComponents, ...compsWithZ],
         connections: [...state.connections, ...action.connections],
+        frames: [...state.frames, ...pastedFrames],
         selectedIds: compsWithZ.map((c) => c.id),
         selectedConnectionId: null,
-        selectedFrameId: null,
-        nextZIndex: baseZ + action.components.length,
+        selectedFrameId: pastedFrames.length === 1 ? (pastedFrames[0]?.id ?? null) : null,
+        nextZIndex: baseZ + action.components.length + newFrameCount,
       };
     }
     case 'ALIGN_COMPONENTS': {
@@ -477,7 +495,7 @@ const initialState: CanvasState = {
 };
 
 const MUTATION_ACTIONS = new Set([
-  'ADD', 'MOVE', 'REMOVE', 'REMOVE_MANY', 'RESIZE', 'ALIGN_COMPONENTS',
+  'ADD', 'MOVE', 'MOVE_MANY', 'REMOVE', 'REMOVE_MANY', 'RESIZE', 'ALIGN_COMPONENTS',
   'ADD_CONNECTION', 'REMOVE_CONNECTION',
   'ADD_FRAME', 'MOVE_FRAME', 'REMOVE_FRAME', 'RENAME_FRAME', 'RENAME_COMPONENT',
   'RESIZE_FRAME', 'SET_COMPONENT_FRAME', 'SET_FRAME_PARENT',
@@ -541,6 +559,10 @@ export function usePlacedComponents() {
     dispatch({ type: 'MOVE', id, x, y });
   }, []);
 
+  const moveMany = useCallback((moves: { id: string; x: number; y: number }[]) => {
+    dispatch({ type: 'MOVE_MANY', moves });
+  }, []);
+
   const removeComponent = useCallback((id: string) => {
     dispatch({ type: 'REMOVE', id });
   }, []);
@@ -590,8 +612,8 @@ export function usePlacedComponents() {
     dispatch({ type: 'SELECT_CONNECTION', id });
   }, []);
 
-  const selectMany = useCallback((ids: string[]) => {
-    dispatch({ type: 'SELECT_MANY', ids });
+  const selectMany = useCallback((ids: string[], frameId?: string | null) => {
+    dispatch({ type: 'SELECT_MANY', ids, frameId });
   }, []);
 
   const removeMany = useCallback((ids: string[]) => {
@@ -696,8 +718,8 @@ export function usePlacedComponents() {
   );
 
   const pasteComponents = useCallback(
-    (components: import('@/lib/types').PlacedComponent[], connections: import('@/lib/types').Connection[]) => {
-      dispatch({ type: 'PASTE', components, connections });
+    (components: import('@/lib/types').PlacedComponent[], connections: import('@/lib/types').Connection[], frames: import('@/lib/types').Frame[] = []) => {
+      dispatch({ type: 'PASTE', components, connections, frames });
     },
     []
   );
@@ -716,6 +738,7 @@ export function usePlacedComponents() {
     selectedFrameId: state.selectedFrameId,
     addComponent,
     moveComponent,
+    moveMany,
     removeComponent,
     selectComponent,
     resizeComponent,

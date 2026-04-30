@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useRef, useCallback, type RefObject } from 'react';
-import type { CanvasTransform, PlacedComponent, SelectionRect } from '@/lib/types';
+import type { CanvasTransform, PlacedComponent, Frame, SelectionRect } from '@/lib/types';
 import { screenToCanvas, rectsIntersect } from '@/lib/canvas-utils';
 
 export function useMarqueeSelect(
   canvasRef: RefObject<HTMLElement | null>,
   transform: CanvasTransform,
   placedComponents: PlacedComponent[],
-  selectMany: (ids: string[]) => void,
+  frames: Frame[],
+  selectMany: (ids: string[], frameId?: string | null) => void,
   selectComponent: (id: string | null) => void,
   selectConnection: (id: string | null) => void,
 ) {
@@ -90,12 +91,20 @@ export function useMarqueeSelect(
           )
           .map((c) => c.id);
 
-        selectMany(matchedIds);
+        const matchedFrames = frames.filter((f) =>
+          rectsIntersect(selRect, { x: f.x, y: f.y, width: f.width, height: f.height }),
+        );
+        // Use the last matched frame (highest zIndex = deepest/frontmost)
+        const matchedFrame = matchedFrames.length > 0
+          ? matchedFrames.reduce((a, b) => (b.zIndex > a.zIndex ? b : a))
+          : null;
+
+        selectMany(matchedIds, matchedFrame?.id ?? null);
       }
 
       setSelectionRect(null);
     },
-    [placedComponents, selectMany, selectComponent, selectConnection],
+    [placedComponents, frames, selectMany, selectComponent, selectConnection],
   );
 
   return {

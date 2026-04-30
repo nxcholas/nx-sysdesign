@@ -27,6 +27,8 @@ interface FrameComponentProps {
   onConnectionDragEnd: (entityId: string, port: PortSide) => void;
   connectionDragState: ConnectionDragState;
   highlightedPorts: Set<string>;
+  isPanActive: boolean;
+  isCopied?: boolean;
 }
 
 const PORT_SIDES: EdgePortSide[] = ['top', 'right', 'bottom', 'left'];
@@ -47,6 +49,8 @@ export function FrameComponent({
   onConnectionDragEnd,
   connectionDragState,
   highlightedPorts,
+  isPanActive,
+  isCopied,
 }: FrameComponentProps) {
   const dragRef = useRef<{
     active: boolean;
@@ -60,6 +64,7 @@ export function FrameComponent({
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (e.button !== 0) return;
+      if (isPanActive) return;
       e.stopPropagation();
       // Nested frames (parentFrameId set) require double-click to select — single click is handled by parent
       if (!frame.parentFrameId) {
@@ -75,7 +80,7 @@ export function FrameComponent({
         didMove: false,
       };
     },
-    [frame.id, frame.x, frame.y, frame.parentFrameId, onSelect],
+    [frame.id, frame.x, frame.y, frame.parentFrameId, onSelect, isPanActive],
   );
 
   const handleDoubleClick = useCallback(
@@ -144,8 +149,8 @@ export function FrameComponent({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onDoubleClick={handleDoubleClick}
-      className={`group rounded-lg border-2 border-dashed cursor-grab active:cursor-grabbing
-        ${isHighlighted ? 'border-blue-400 bg-blue-500/10' : isSelected ? 'border-blue-500' : 'border-gray-600 hover:border-gray-500'}`}
+      className={`group rounded-lg border-2 border-dashed cursor-grab active:cursor-grabbing transition-colors
+        ${isCopied ? 'border-emerald-400 bg-emerald-500/10' : isHighlighted ? 'border-blue-400 bg-blue-500/10' : isSelected ? 'border-blue-500' : 'border-gray-600 hover:border-blue-400'}`}
     >
       {/* Label  */}
       <div

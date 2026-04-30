@@ -68,6 +68,7 @@ export interface CanvasRootProps {
   // Callbacks — component
   addComponent: (kind: PaletteItemKind, x: number, y: number, width: number, height: number, frameId?: string, extras?: Partial<Pick<PlacedComponent, 'text' | 'textStyle' | 'shapeStyle'>>) => void;
   moveComponent: (id: string, x: number, y: number) => void;
+  moveMany: (moves: { id: string; x: number; y: number }[]) => void;
   removeComponent: (id: string) => void;
   selectComponent: (id: string | null) => void;
   resizeComponent: (id: string, width: number, height: number) => void;
@@ -89,6 +90,8 @@ export interface CanvasRootProps {
   setComponentFrame: (componentId: string, frameId: string | null) => void;
   setFrameParent: (frameId: string, parentFrameId: string | null) => void;
   // Pan/zoom handlers (owned by page.tsx via useCanvas)
+  isPanActive: boolean;
+  setIsPanActive: (v: boolean) => void;
   didPanRef: React.RefObject<boolean>;
   spaceHeldRef: React.RefObject<boolean>;
   ctrlHeldRef: React.RefObject<boolean>;
@@ -111,7 +114,7 @@ export interface CanvasRootProps {
   updateShapeKind: (id: string, shape: ShapeKind) => void;
   // Clipboard & history
   undo: () => void;
-  pasteComponents: (components: PlacedComponent[], connections: Connection[]) => void;
+  pasteComponents: (components: PlacedComponent[], connections: Connection[], frames: Frame[]) => void;
   beginDragHistory: () => void;
   endDragHistory: () => void;
   // Diagram persistence callback
@@ -135,6 +138,7 @@ export function CanvasRoot(props: CanvasRootProps) {
     exportLayerRef,
     addComponent,
     moveComponent,
+    moveMany,
     removeComponent,
     selectComponent,
     resizeComponent,
@@ -164,6 +168,8 @@ export function CanvasRoot(props: CanvasRootProps) {
     updateTextStyle,
     updateShapeStyle,
     updateShapeKind,
+    isPanActive,
+    setIsPanActive,
     didPanRef,
     spaceHeldRef,
     ctrlHeldRef,
@@ -184,12 +190,29 @@ export function CanvasRoot(props: CanvasRootProps) {
   // useCanvasTool is purely local UI state — kept internal
   const { activeTool, setActiveTool } = useCanvasTool();
 
+  // Sync isPanActive when the pan tool is explicitly selected or deselected
+  useEffect(() => {
+    if (activeTool === 'pan') {
+      setIsPanActive(true);
+    } else {
+      // Only clear if neither modifier key is held
+      if (!spaceHeldRef.current && !ctrlHeldRef.current) {
+        setIsPanActive(false);
+      }
+    }
+  }, [activeTool, setIsPanActive, spaceHeldRef, ctrlHeldRef]);
+
+  // isPanBlockActive is the final derived value used by child components
+  const isPanBlockActive = isPanActive || activeTool === 'pan';
+
   const [activeShape, setActiveShape] = useState<ShapeKind | null>(null);
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [flowVisible, setFlowVisible] = useState(true);
   const [labelEditingId, setLabelEditingId] = useState<string | null>(null);
   const [labelDraggingId, setLabelDraggingId] = useState<string | null>(null);
+  const [copiedFrameIds, setCopiedFrameIds] = useState<Set<string>>(new Set());
+  const copiedFrameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const labelDragRef = useRef<{ connId: string; canvasPoints: { x: number; y: number }[] } | null>(null);
 
   const { handleDragOver, handleDrop } = useDragDrop();
@@ -207,11 +230,23 @@ export function CanvasRoot(props: CanvasRootProps) {
   const selectedIdsRef = useRef(selectedIds);
   selectedIdsRef.current = selectedIds;
 
+  const selectedFrameIdRef = useRef(selectedFrameId);
+  selectedFrameIdRef.current = selectedFrameId;
+
+  const handleCopied = useCallback((frameIds: string[]) => {
+    setCopiedFrameIds(new Set(frameIds));
+    if (copiedFrameTimerRef.current) clearTimeout(copiedFrameTimerRef.current);
+    copiedFrameTimerRef.current = setTimeout(() => setCopiedFrameIds(new Set()), 600);
+  }, []);
+
   const { copy: clipboardCopy, paste: clipboardPaste } = useClipboard(
     () => selectedIdsRef.current,
     () => placedComponentsRef.current,
     () => connectionsRef.current,
+    () => framesRef.current,
+    () => selectedFrameIdRef.current,
     pasteComponents,
+    handleCopied,
   );
 
   const {
@@ -227,7 +262,7 @@ export function CanvasRoot(props: CanvasRootProps) {
     handleSelectionPointerDown,
     handleSelectionPointerMove,
     handleSelectionPointerUp,
-  } = useMarqueeSelect(canvasRef, transform, placedComponents, selectMany, selectComponent, selectConnection);
+  } = useMarqueeSelect(canvasRef, transform, placedComponents, frames, selectMany, selectComponent, selectConnection);
 
   const {
     frameDrawRect,
@@ -314,10 +349,10 @@ export function CanvasRoot(props: CanvasRootProps) {
         return;
       }
 
-      // Ctrl+C — copy selected components
+      // Ctrl+C — copy selected components and/or selected frame
       if (ctrl && e.key === 'c') {
         if (inInput) return;
-        if (selectedIds.length > 0) {
+        if (selectedIds.length > 0 || selectedFrameId) {
           e.preventDefault();
           clipboardCopy();
         }
@@ -609,6 +644,7 @@ export function CanvasRoot(props: CanvasRootProps) {
         selectedIds={selectedIds}
         onSelect={selectComponent}
         onMove={moveComponent}
+        onMoveMany={moveMany}
         onRemove={removeComponent}
         onResize={resizeComponent}
         onResizeWithMove={(id, x, y, w, h) => { resizeComponent(id, w, h); moveComponent(id, x, y); }}
@@ -647,6 +683,8 @@ export function CanvasRoot(props: CanvasRootProps) {
         autoFocusId={autoFocusId}
         onBeginDragHistory={beginDragHistory}
         onEndDragHistory={endDragHistory}
+        isPanActive={isPanBlockActive}
+        copiedFrameIds={copiedFrameIds}
       />
 
       {/* Connections overlay — rendered AFTER viewport so hit areas are above frames/components */}

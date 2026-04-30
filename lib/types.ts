@@ -183,9 +183,10 @@ export interface Connection {
 export type CanvasAction =
   | { type: 'ADD'; payload: Omit<PlacedComponent, 'id' | 'zIndex'> }
   | { type: 'MOVE'; id: string; x: number; y: number }
+  | { type: 'MOVE_MANY'; moves: { id: string; x: number; y: number }[] }
   | { type: 'REMOVE'; id: string }
   | { type: 'SELECT'; id: string | null }
-  | { type: 'SELECT_MANY'; ids: string[] }
+  | { type: 'SELECT_MANY'; ids: string[]; frameId?: string | null }
   | { type: 'SELECT_CONNECTION'; id: string | null }
   | { type: 'RESIZE'; id: string; width: number; height: number }
   | { type: 'ADD_CONNECTION'; payload: Omit<Connection, 'id'> }
@@ -213,7 +214,7 @@ export type CanvasAction =
   | { type: 'UPDATE_SHAPE_STYLE'; id: string; style: Partial<ShapeStyle> }
   | { type: 'UPDATE_SHAPE_KIND'; id: string; shape: ShapeKind }
   | { type: 'LOAD_DIAGRAM'; payload: Pick<DiagramSchema, 'components' | 'connections' | 'frames'> }
-  | { type: 'PASTE'; components: PlacedComponent[]; connections: Connection[] }
+  | { type: 'PASTE'; components: PlacedComponent[]; connections: Connection[]; frames: Frame[] }
   | { type: 'RESTORE_STATE'; state: CanvasState }
   | { type: 'ALIGN_COMPONENTS'; ids: string[]; direction: AlignmentDirection };
 

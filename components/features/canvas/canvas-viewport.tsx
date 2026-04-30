@@ -9,6 +9,7 @@ interface CanvasViewportProps {
   selectedIds: string[];
   onSelect: (id: string | null) => void;
   onMove: (id: string, x: number, y: number) => void;
+  onMoveMany: (moves: { id: string; x: number; y: number }[]) => void;
   onRemove: (id: string) => void;
   onResize: (id: string, width: number, height: number) => void;
   onResizeWithMove?: (id: string, x: number, y: number, width: number, height: number) => void;
@@ -37,6 +38,8 @@ interface CanvasViewportProps {
   autoFocusId: string | null;
   onBeginDragHistory: () => void;
   onEndDragHistory: () => void;
+  isPanActive: boolean;
+  copiedFrameIds: Set<string>;
 }
 
 
@@ -46,6 +49,7 @@ export function CanvasViewport({
   selectedIds,
   onSelect,
   onMove,
+  onMoveMany,
   onRemove,
   onResize,
   onResizeWithMove,
@@ -74,6 +78,8 @@ export function CanvasViewport({
   autoFocusId,
   onBeginDragHistory,
   onEndDragHistory,
+  isPanActive,
+  copiedFrameIds,
 }: CanvasViewportProps) {
   const { scale, translateX, translateY } = transform;
 
@@ -110,6 +116,8 @@ export function CanvasViewport({
           onConnectionDragEnd={onConnectionDragEnd}
           connectionDragState={connectionDragState}
           highlightedPorts={highlightedPorts}
+          isPanActive={isPanActive}
+          isCopied={copiedFrameIds.has(frame.id)}
         />
       ))}
 
@@ -119,9 +127,12 @@ export function CanvasViewport({
           key={component.id}
           component={component}
           isSelected={selectedIds.includes(component.id)}
+          selectedIds={selectedIds}
+          allComponents={placedComponents}
           transform={transform}
           onSelect={onSelect}
           onMove={onMove}
+          onMoveMany={onMoveMany}
           onRemove={onRemove}
           onResize={onResize}
           onResizeWithMove={onResizeWithMove}
@@ -142,6 +153,7 @@ export function CanvasViewport({
           onRemoveTableRow={onRemoveTableRow}
           onRenameTableRow={onRenameTableRow}
           onCycleTableKey={onCycleTableKey}
+          isPanActive={isPanActive}
         />
       ))}
     </div>

@@ -15,6 +15,7 @@ import { UpgradeModal } from '@/components/features/billing/upgrade-modal';
 import { ZeroStateTemplates } from '@/components/features/canvas/zero-state-templates';
 import { NewDiagramModal } from '@/components/features/canvas/new-diagram-modal';
 import { DeleteDiagramModal } from '@/components/features/canvas/delete-diagram-modal';
+import { BugReportFab } from '@/components/features/feedback/bug-report-fab';
 import type { DiagramTemplate } from '@/lib/templates/index';
 
 export default function Page() {
@@ -263,6 +264,13 @@ export default function Page() {
         />
       )}
       {upgradeOpen && <UpgradeModal onClose={() => setUpgradeOpen(false)} onSuccess={handleUpgradeSuccess} />}
+      <BugReportFab
+        activeDiagramId={diagrams.activeDiagramId ?? null}
+        activeDiagramName={
+          diagrams.diagrams.find((d) => d.id === diagrams.activeDiagramId)?.name ?? null
+        }
+        hasSidePanel={diagrams.diagrams.length > 0}
+      />
     </div>
   );
 }

@@ -213,7 +213,7 @@ export type CanvasAction =
   | { type: 'UPDATE_SHAPE_STYLE'; id: string; style: Partial<ShapeStyle> }
   | { type: 'UPDATE_SHAPE_KIND'; id: string; shape: ShapeKind }
   | { type: 'LOAD_DIAGRAM'; payload: Pick<DiagramSchema, 'components' | 'connections' | 'frames'> }
-  | { type: 'PASTE'; components: PlacedComponent[]; connections: Connection[] }
+  | { type: 'PASTE'; components: PlacedComponent[]; connections: Connection[]; frames: Frame[] }
   | { type: 'RESTORE_STATE'; state: CanvasState }
   | { type: 'ALIGN_COMPONENTS'; ids: string[]; direction: AlignmentDirection };
 

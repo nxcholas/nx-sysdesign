@@ -40,6 +40,7 @@ interface PlacedComponentItemProps {
   onRemoveTableRow: (id: string, rowId: string) => void;
   onRenameTableRow: (id: string, rowId: string, name: string) => void;
   onCycleTableKey: (id: string, rowId: string) => void;
+  isPanActive: boolean;
 }
 
 interface ComponentVisualProps {
@@ -166,6 +167,7 @@ export function PlacedComponentItem({
   onRemoveTableRow,
   onRenameTableRow,
   onCycleTableKey,
+  isPanActive,
 }: PlacedComponentItemProps) {
   const dragStartRef = useRef<{
     pointerX: number;
@@ -183,6 +185,7 @@ export function PlacedComponentItem({
     (e: React.PointerEvent) => {
       if (e.button !== 0) return;
       if (isConnectionDragging) return;
+      if (isPanActive) return;
       e.stopPropagation();
       onSelect(component.id);
       hasCapturedRef.current = false;
@@ -193,7 +196,7 @@ export function PlacedComponentItem({
         compY: component.y,
       };
     },
-    [component.id, component.x, component.y, onSelect, isConnectionDragging]
+    [component.id, component.x, component.y, onSelect, isConnectionDragging, isPanActive]
   );
 
   const handlePointerMove = useCallback(

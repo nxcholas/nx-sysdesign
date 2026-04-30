@@ -27,6 +27,7 @@ interface FrameComponentProps {
   onConnectionDragEnd: (entityId: string, port: PortSide) => void;
   connectionDragState: ConnectionDragState;
   highlightedPorts: Set<string>;
+  isPanActive: boolean;
 }
 
 const PORT_SIDES: EdgePortSide[] = ['top', 'right', 'bottom', 'left'];
@@ -47,6 +48,7 @@ export function FrameComponent({
   onConnectionDragEnd,
   connectionDragState,
   highlightedPorts,
+  isPanActive,
 }: FrameComponentProps) {
   const dragRef = useRef<{
     active: boolean;
@@ -60,6 +62,7 @@ export function FrameComponent({
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (e.button !== 0) return;
+      if (isPanActive) return;
       e.stopPropagation();
       // Nested frames (parentFrameId set) require double-click to select — single click is handled by parent
       if (!frame.parentFrameId) {
@@ -75,7 +78,7 @@ export function FrameComponent({
         didMove: false,
       };
     },
-    [frame.id, frame.x, frame.y, frame.parentFrameId, onSelect],
+    [frame.id, frame.x, frame.y, frame.parentFrameId, onSelect, isPanActive],
   );
 
   const handleDoubleClick = useCallback(

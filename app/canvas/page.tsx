@@ -227,6 +227,8 @@ export default function Page() {
           transform={canvasTransformHook.transform}
           canvasRef={canvasRef}
           exportLayerRef={exportLayerRef}
+          isPanActive={canvasTransformHook.isPanActive}
+          setIsPanActive={canvasTransformHook.setIsPanActive}
           didPanRef={canvasTransformHook.didPanRef}
           spaceHeldRef={canvasTransformHook.spaceHeldRef}
           ctrlHeldRef={canvasTransformHook.ctrlHeldRef}

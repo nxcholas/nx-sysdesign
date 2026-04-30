@@ -439,14 +439,17 @@ function canvasReducer(state: CanvasState, action: CanvasAction): CanvasState {
     case 'PASTE': {
       const baseZ = state.nextZIndex;
       const compsWithZ = action.components.map((c, i) => ({ ...c, zIndex: baseZ + i }));
+      const newFrameCount = action.frames.length;
+      const pastedFrames = action.frames.map((f, i) => ({ ...f, zIndex: baseZ + action.components.length + i }));
       return {
         ...state,
         placedComponents: [...state.placedComponents, ...compsWithZ],
         connections: [...state.connections, ...action.connections],
+        frames: [...state.frames, ...pastedFrames],
         selectedIds: compsWithZ.map((c) => c.id),
         selectedConnectionId: null,
-        selectedFrameId: null,
-        nextZIndex: baseZ + action.components.length,
+        selectedFrameId: pastedFrames.length === 1 ? (pastedFrames[0]?.id ?? null) : null,
+        nextZIndex: baseZ + action.components.length + newFrameCount,
       };
     }
     case 'ALIGN_COMPONENTS': {
@@ -696,8 +699,8 @@ export function usePlacedComponents() {
   );
 
   const pasteComponents = useCallback(
-    (components: import('@/lib/types').PlacedComponent[], connections: import('@/lib/types').Connection[]) => {
-      dispatch({ type: 'PASTE', components, connections });
+    (components: import('@/lib/types').PlacedComponent[], connections: import('@/lib/types').Connection[], frames: import('@/lib/types').Frame[] = []) => {
+      dispatch({ type: 'PASTE', components, connections, frames });
     },
     []
   );

@@ -20,6 +20,7 @@ const DEFAULT_TRANSFORM: CanvasTransform = {
 
 export function useCanvas(canvasRef: RefObject<HTMLElement | null>) {
   const [transform, setTransform] = useState<CanvasTransform>(DEFAULT_TRANSFORM);
+  const [isPanActive, setIsPanActive] = useState(false);
   const panStateRef = useRef<PanState>({
     active: false,
     startX: 0,
@@ -50,15 +51,28 @@ export function useCanvas(canvasRef: RefObject<HTMLElement | null>) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvasRef.current]);
 
-  // Track spacebar and Ctrl for hold-to-pan shortcuts
+  // Track spacebar and Ctrl for hold-to-pan shortcuts.
+  // Also drive isPanActive state so child components can block interactions.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !e.repeat) spaceHeldRef.current = true;
-      if (e.key === 'Control' && !e.repeat) ctrlHeldRef.current = true;
+      if (e.code === 'Space' && !e.repeat) {
+        spaceHeldRef.current = true;
+        setIsPanActive(true);
+      }
+      if (e.key === 'Control' && !e.repeat) {
+        ctrlHeldRef.current = true;
+        setIsPanActive(true);
+      }
     };
     const onKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') spaceHeldRef.current = false;
-      if (e.key === 'Control') ctrlHeldRef.current = false;
+      if (e.code === 'Space') {
+        spaceHeldRef.current = false;
+        if (!ctrlHeldRef.current) setIsPanActive(false);
+      }
+      if (e.key === 'Control') {
+        ctrlHeldRef.current = false;
+        if (!spaceHeldRef.current) setIsPanActive(false);
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
@@ -113,6 +127,8 @@ export function useCanvas(canvasRef: RefObject<HTMLElement | null>) {
   return {
     transform,
     setTransform,
+    isPanActive,
+    setIsPanActive,
     didPanRef,
     spaceHeldRef,
     ctrlHeldRef,

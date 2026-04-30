@@ -37,6 +37,7 @@ interface CanvasViewportProps {
   autoFocusId: string | null;
   onBeginDragHistory: () => void;
   onEndDragHistory: () => void;
+  isPanActive: boolean;
 }
 
 
@@ -74,6 +75,7 @@ export function CanvasViewport({
   autoFocusId,
   onBeginDragHistory,
   onEndDragHistory,
+  isPanActive,
 }: CanvasViewportProps) {
   const { scale, translateX, translateY } = transform;
 
@@ -110,6 +112,7 @@ export function CanvasViewport({
           onConnectionDragEnd={onConnectionDragEnd}
           connectionDragState={connectionDragState}
           highlightedPorts={highlightedPorts}
+          isPanActive={isPanActive}
         />
       ))}
 
@@ -142,6 +145,7 @@ export function CanvasViewport({
           onRemoveTableRow={onRemoveTableRow}
           onRenameTableRow={onRenameTableRow}
           onCycleTableKey={onCycleTableKey}
+          isPanActive={isPanActive}
         />
       ))}
     </div>

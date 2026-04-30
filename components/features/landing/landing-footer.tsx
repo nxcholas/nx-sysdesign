@@ -20,6 +20,11 @@ const appLinks = [
   { href: '/sign-in', label: 'Sign in' },
 ];
 
+const legalLinks = [
+  { href: '/terms', label: 'Terms of Use' },
+  { href: '/privacy', label: 'Privacy Policy' },
+];
+
 export function LandingFooter(): React.ReactElement {
   return (
     <motion.footer
@@ -30,7 +35,7 @@ export function LandingFooter(): React.ReactElement {
       className="border-t border-panel-border bg-header-bg/40"
     >
       <div className="mx-auto max-w-6xl px-6 md:px-8 py-12 md:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-10 md:gap-8 mb-12">
           {/* Brand column */}
           <div className="md:col-span-2 flex flex-col gap-4">
             <Link href="/" className="flex items-center w-fit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded">
@@ -69,6 +74,24 @@ export function LandingFooter(): React.ReactElement {
               Account
             </h3>
             {appLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-sm text-gray-500 hover:text-gray-300 transition-colors
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded
+                  w-fit"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Legal links */}
+          <div className="flex flex-col gap-3">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider font-mono mb-1">
+              Legal
+            </h3>
+            {legalLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}

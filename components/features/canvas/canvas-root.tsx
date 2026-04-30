@@ -371,11 +371,6 @@ export function CanvasRoot(props: CanvasRootProps) {
       if (inInput) return;
       e.preventDefault();
       if (selectedFrameId) {
-        // Remove child components of the frame first, then the frame itself
-        const childIds = placedComponents
-          .filter((c) => c.frameId === selectedFrameId)
-          .map((c) => c.id);
-        if (childIds.length > 0) removeMany(childIds);
         removeFrame(selectedFrameId);
       } else if (selectedConnectionId) {
         removeConnection(selectedConnectionId);

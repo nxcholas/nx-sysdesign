@@ -150,7 +150,7 @@ export function FrameComponent({
       onPointerUp={handlePointerUp}
       onDoubleClick={handleDoubleClick}
       className={`group rounded-lg border-2 border-dashed cursor-grab active:cursor-grabbing transition-colors
-        ${isCopied ? 'border-emerald-400 bg-emerald-500/10' : isHighlighted ? 'border-blue-400 bg-blue-500/10' : isSelected ? 'border-blue-500' : 'border-gray-600 hover:border-gray-500'}`}
+        ${isCopied ? 'border-emerald-400 bg-emerald-500/10' : isHighlighted ? 'border-blue-400 bg-blue-500/10' : isSelected ? 'border-blue-500' : 'border-gray-600 hover:border-blue-400'}`}
     >
       {/* Label  */}
       <div

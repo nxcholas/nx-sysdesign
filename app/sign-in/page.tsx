@@ -6,7 +6,6 @@ import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BrandLockup } from '@/components/ui/brand-lockup';
 import { PasswordInput } from '@/components/ui/password-input';
-import { GoogleOneTap } from '@/components/features/auth/google-one-tap';
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   OAuthAccountNotLinked:
@@ -60,8 +59,6 @@ function SignInContent() {
   }
 
   return (
-    <>
-    <GoogleOneTap />
     <main className="min-h-screen bg-canvas-bg flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="bg-header-bg border border-panel-border rounded-xl p-8 flex flex-col gap-6">
@@ -200,7 +197,6 @@ function SignInContent() {
         </div>
       </div>
     </main>
-    </>
   );
 }
 

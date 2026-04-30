@@ -5,7 +5,6 @@ import Credentials from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
-import { verifyOneTapToken } from '@/lib/one-tap-token';
 
 if (!process.env.AUTH_GOOGLE_ID || !process.env.AUTH_GOOGLE_SECRET) {
   throw new Error('Missing required env vars: AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET must be set');
@@ -36,19 +35,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
-        onetapToken: { label: 'One Tap Token', type: 'text' },
       },
       async authorize(credentials) {
-        // One Tap path: verify the HMAC-signed token issued by /api/auth/one-tap.
-        // This prevents a client from supplying an arbitrary userId directly.
-        if (credentials?.onetapToken) {
-          const userId = verifyOneTapToken(credentials.onetapToken as string);
-          if (!userId) return null;
-          const user = await db.user.findUnique({ where: { id: userId } });
-          if (!user) return null;
-          return { id: user.id, email: user.email, name: user.name, image: user.image };
-        }
-
         if (!credentials?.email || !credentials?.password) return null;
 
         const normalizedEmail = (credentials.email as string).toLowerCase().trim();

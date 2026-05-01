@@ -48,8 +48,7 @@ export function useCanvas(canvasRef: RefObject<HTMLElement | null>) {
 
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvasRef.current]);
+  }, [canvasRef]);
 
   // Track spacebar and Ctrl for hold-to-pan shortcuts.
   // Also drive isPanActive state so child components can block interactions.
@@ -84,7 +83,9 @@ export function useCanvas(canvasRef: RefObject<HTMLElement | null>) {
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
-      if (e.button !== 0 && e.button !== 1) return;
+      const isMiddle = e.button === 1;
+      const isPanModifier = spaceHeldRef.current || ctrlHeldRef.current;
+      if (!isMiddle && !isPanModifier) return;
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       didPanRef.current = false;
       panStateRef.current = {

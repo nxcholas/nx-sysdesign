@@ -11,19 +11,20 @@ import type { CardinalityEnd } from './types';
 export function getCardinalityGlyphPaths(
   end: CardinalityEnd,
   anchor: { x: number; y: number },
-  direction: { dx: number; dy: number }
+  direction: { dx: number; dy: number },
+  scale: number = 1,
 ): string[] {
   // Perpendicular unit vector (rotate direction 90 degrees)
   const px = -direction.dy;
   const py = direction.dx;
 
-  // Constants
-  const barHalf = 6;
-  const circleR = 4;
-  const outerOffset = 19; // MIN symbol — further from anchor (increased from 16 for +3px gap)
-  const innerOffset = 12; // MAX symbol — closer to anchor (touching the component edge)
+  // Constants — scaled so glyphs remain proportional at any zoom level
+  const barHalf = 6 * scale;
+  const circleR = 4 * scale;
+  const outerOffset = 19 * scale; // MIN symbol — further from anchor
+  const innerOffset = 12 * scale; // MAX symbol — closer to anchor
   const fanAngle = (40 * Math.PI) / 180;
-  const footLen = 12;
+  const footLen = 12 * scale;
 
   // Direction vector (points away from component along line)
   const odx = direction.dx;

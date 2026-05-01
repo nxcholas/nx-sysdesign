@@ -742,9 +742,9 @@ export function CanvasRoot(props: CanvasRootProps) {
                 const srcLen = Math.sqrt(srcDx * srcDx + srcDy * srcDy);
                 if (srcLen > 0) {
                   const srcDir = { dx: srcDx / srcLen, dy: srcDy / srcLen };
-                  getCardinalityGlyphPaths(conn.cardinality.source, srcAnchor, srcDir).forEach((d, i) => {
+                  getCardinalityGlyphPaths(conn.cardinality.source, srcAnchor, srcDir, scale).forEach((d, i) => {
                     cardinalityGlyphs.push(
-                      <path key={`src-${i}`} d={d} fill="none" stroke={strokeColor} strokeWidth={1.5} strokeLinecap="round" style={{ pointerEvents: 'none' }} />
+                      <path key={`src-${i}`} d={d} fill="none" stroke={strokeColor} strokeWidth={1.5 * scale} strokeLinecap="round" style={{ pointerEvents: 'none' }} />
                     );
                   });
                 }
@@ -755,9 +755,9 @@ export function CanvasRoot(props: CanvasRootProps) {
                 const tgtLen = Math.sqrt(tgtDx * tgtDx + tgtDy * tgtDy);
                 if (tgtLen > 0) {
                   const tgtDir = { dx: tgtDx / tgtLen, dy: tgtDy / tgtLen };
-                  getCardinalityGlyphPaths(conn.cardinality.target, tgtAnchor, tgtDir).forEach((d, i) => {
+                  getCardinalityGlyphPaths(conn.cardinality.target, tgtAnchor, tgtDir, scale).forEach((d, i) => {
                     cardinalityGlyphs.push(
-                      <path key={`tgt-${i}`} d={d} fill="none" stroke={strokeColor} strokeWidth={1.5} strokeLinecap="round" style={{ pointerEvents: 'none' }} />
+                      <path key={`tgt-${i}`} d={d} fill="none" stroke={strokeColor} strokeWidth={1.5 * scale} strokeLinecap="round" style={{ pointerEvents: 'none' }} />
                     );
                   });
                 }

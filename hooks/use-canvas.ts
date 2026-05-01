@@ -21,6 +21,10 @@ const DEFAULT_TRANSFORM: CanvasTransform = {
 export function useCanvas(canvasRef: RefObject<HTMLElement | null>) {
   const [transform, setTransform] = useState<CanvasTransform>(DEFAULT_TRANSFORM);
   const [isPanActive, setIsPanActive] = useState(false);
+  // Tracks whether the wheel listener has been attached so we can attach it
+  // once the ref resolves. canvasRef.current is null on first render because
+  // CanvasRoot mounts conditionally after diagrams load.
+  const [canvasEl, setCanvasEl] = useState<HTMLElement | null>(null);
   const panStateRef = useRef<PanState>({
     active: false,
     startX: 0,
@@ -34,8 +38,11 @@ export function useCanvas(canvasRef: RefObject<HTMLElement | null>) {
 
   // Attach wheel listener imperatively so we can pass { passive: false }.
   // React's onWheel is passive in newer browsers and can't call preventDefault.
+  // canvasEl state (not canvasRef) is used as the dep so the effect re-runs
+  // when the DOM element actually mounts (canvasRef.current is null on first render
+  // because CanvasRoot is conditionally rendered after diagrams load).
   useEffect(() => {
-    const el = canvasRef.current;
+    const el = canvasEl;
     if (!el) return;
 
     const onWheel = (e: WheelEvent) => {
@@ -48,7 +55,7 @@ export function useCanvas(canvasRef: RefObject<HTMLElement | null>) {
 
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, [canvasRef]);
+  }, [canvasEl]);
 
   // Track spacebar and Ctrl for hold-to-pan shortcuts.
   // Also drive isPanActive state so child components can block interactions.
@@ -137,5 +144,6 @@ export function useCanvas(canvasRef: RefObject<HTMLElement | null>) {
     handlePointerMove,
     handlePointerUp,
     resetTransform,
+    setCanvasEl,
   };
 }

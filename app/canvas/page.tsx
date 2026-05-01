@@ -227,6 +227,7 @@ export default function Page() {
           updateShapeKind={canvasHook.updateShapeKind}
           transform={canvasTransformHook.transform}
           canvasRef={canvasRef}
+          onCanvasMount={canvasTransformHook.setCanvasEl}
           exportLayerRef={exportLayerRef}
           isPanActive={canvasTransformHook.isPanActive}
           setIsPanActive={canvasTransformHook.setIsPanActive}

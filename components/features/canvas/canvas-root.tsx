@@ -64,6 +64,7 @@ export interface CanvasRootProps {
   selectedFrameId: string | null;
   transform: CanvasTransform;
   canvasRef: React.RefObject<HTMLDivElement | null>;
+  onCanvasMount: (el: HTMLElement | null) => void;
   exportLayerRef: React.RefObject<HTMLDivElement | null>;
   // Callbacks — component
   addComponent: (kind: PaletteItemKind, x: number, y: number, width: number, height: number, frameId?: string, extras?: Partial<Pick<PlacedComponent, 'text' | 'textStyle' | 'shapeStyle'>>) => void;
@@ -185,6 +186,7 @@ export function CanvasRoot(props: CanvasRootProps) {
     snapEnabled,
     onSnapToggle,
     onAlign,
+    onCanvasMount,
   } = props;
 
   // useCanvasTool is purely local UI state — kept internal
@@ -512,7 +514,10 @@ export function CanvasRoot(props: CanvasRootProps) {
 
   return (
     <main
-      ref={canvasRef}
+      ref={(el) => {
+        (canvasRef as React.MutableRefObject<HTMLElement | null>).current = el;
+        onCanvasMount(el);
+      }}
       aria-label="System design canvas"
       className="relative flex-1 overflow-hidden bg-canvas-bg canvas-grid"
       style={{

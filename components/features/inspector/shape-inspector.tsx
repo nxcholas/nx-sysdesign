@@ -1,8 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import type { PlacedComponent, ShapeStyle, ShapeKind, TextStyle } from '@/lib/types';
 import { DEFAULT_SHAPE_STYLE, DEFAULT_SHAPE_TEXT_STYLE } from '@/lib/constants';
 import { TextStyleControls } from './text-style-controls';
+import { ColorPickerSection } from './color-picker-section';
 
 interface ShapeInspectorProps {
   component: PlacedComponent | null;
@@ -33,6 +35,8 @@ export function ShapeInspector({
   onUpdateTextStyle,
   onRemove,
 }: ShapeInspectorProps) {
+  const [openPicker, setOpenPicker] = useState<'fill' | 'stroke' | null>(null);
+
   if (!component || component.kind.type !== 'shape') return null;
 
   const shapeStyle: ShapeStyle = component.shapeStyle ?? DEFAULT_SHAPE_STYLE;
@@ -85,46 +89,24 @@ export function ShapeInspector({
       </div>
 
       {/* Fill color */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-gray-400">Fill</label>
-        <div className="flex items-center gap-2">
-          <input
-            type="color"
-            value={shapeStyle.fill === 'transparent' ? '#000000' : shapeStyle.fill}
-            onChange={(e) => onUpdateStyle({ fill: e.target.value })}
-            className="w-8 h-7 rounded cursor-pointer border border-panel-border bg-transparent"
-            title="Fill color"
-            disabled={shapeStyle.fill === 'transparent'}
-          />
-          <button
-            type="button"
-            onClick={() =>
-              onUpdateStyle({ fill: shapeStyle.fill === 'transparent' ? '#1a1d24' : 'transparent' })
-            }
-            className={`text-xs px-2 py-1 rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-              shapeStyle.fill === 'transparent'
-                ? 'bg-blue-600/20 text-blue-400 border-blue-500/40'
-                : 'bg-transparent text-gray-400 border-panel-border hover:text-gray-200 hover:bg-panel-hover'
-            }`}
-          >
-            Transparent
-          </button>
-        </div>
-      </div>
+      <ColorPickerSection
+        label="Fill"
+        value={shapeStyle.fill}
+        onChange={(hex) => onUpdateStyle({ fill: hex })}
+        allowTransparent
+        isOpen={openPicker === 'fill'}
+        onToggle={() => setOpenPicker((p) => (p === 'fill' ? null : 'fill'))}
+      />
 
       {/* Border */}
       <div className="flex flex-col gap-2">
-        <label className="text-xs text-gray-400">Border</label>
-        <div className="flex items-center gap-2">
-          <input
-            type="color"
-            value={shapeStyle.stroke}
-            onChange={(e) => onUpdateStyle({ stroke: e.target.value })}
-            className="w-8 h-7 rounded cursor-pointer border border-panel-border bg-transparent"
-            title="Border color"
-          />
-          <span className="text-xs text-gray-400 font-mono">{shapeStyle.stroke}</span>
-        </div>
+        <ColorPickerSection
+          label="Stroke"
+          value={shapeStyle.stroke}
+          onChange={(hex) => onUpdateStyle({ stroke: hex })}
+          isOpen={openPicker === 'stroke'}
+          onToggle={() => setOpenPicker((p) => (p === 'stroke' ? null : 'stroke'))}
+        />
         <div className="flex gap-1">
           {STROKE_WIDTHS.map(({ value, label }) => (
             <button

@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import type { TextStyle } from '@/lib/types';
+import { ColorPickerSection } from './color-picker-section';
 
 interface TextStyleControlsProps {
   style: TextStyle;
@@ -22,6 +24,8 @@ const VERTICAL_ALIGN_OPTIONS: { value: TextStyle['verticalAlign'] }[] = [
 ];
 
 export function TextStyleControls({ style, onChange }: TextStyleControlsProps) {
+  const [openPicker, setOpenPicker] = useState<'textColor' | null>(null);
+
   const inputBase =
     'bg-[#1a1d24] border border-panel-border text-gray-200 text-xs rounded px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500';
   const toggleBase =
@@ -163,19 +167,13 @@ export function TextStyleControls({ style, onChange }: TextStyleControlsProps) {
       </div>
 
       {/* Color */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-gray-400">Color</label>
-        <div className="flex items-center gap-2">
-          <input
-            type="color"
-            value={style.color ?? '#e5e7eb'}
-            onChange={(e) => onChange({ color: e.target.value })}
-            className="w-8 h-7 rounded cursor-pointer border border-panel-border bg-transparent"
-            title="Text color"
-          />
-          <span className="text-xs text-gray-400 font-mono">{style.color ?? '#e5e7eb'}</span>
-        </div>
-      </div>
+      <ColorPickerSection
+        label="Text Color"
+        value={style.color ?? '#e5e7eb'}
+        onChange={(hex) => onChange({ color: hex })}
+        isOpen={openPicker === 'textColor'}
+        onToggle={() => setOpenPicker((p) => (p === 'textColor' ? null : 'textColor'))}
+      />
     </div>
   );
 }

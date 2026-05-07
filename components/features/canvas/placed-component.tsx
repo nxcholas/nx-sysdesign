@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import type { PlacedComponent, CanvasTransform, PortSide, RowPortSide, EdgePortSide, Frame } from '@/lib/types';
 import { HttpMethodBadge } from '@/components/features/blocks/http-method-badge';
 import { StatusCodeBadge } from '@/components/features/blocks/status-code-badge';
@@ -289,6 +289,19 @@ export function PlacedComponentItem({
     if (hasCapturedRef.current) onEndDragHistory();
     dragStartRef.current = null;
     hasCapturedRef.current = false;
+  }, [onEndDragHistory]);
+
+  // Clear drag state if pointerup fires outside this element (e.g. inside the inspector panel
+  // which calls stopPropagation, preventing the component's own onPointerUp from firing).
+  useEffect(() => {
+    const onWindowPointerUp = () => {
+      if (!dragStartRef.current && !hasCapturedRef.current) return;
+      if (hasCapturedRef.current) onEndDragHistory();
+      dragStartRef.current = null;
+      hasCapturedRef.current = false;
+    };
+    window.addEventListener('pointerup', onWindowPointerUp);
+    return () => window.removeEventListener('pointerup', onWindowPointerUp);
   }, [onEndDragHistory]);
 
   return (

@@ -124,7 +124,7 @@ export function ShapeRenderer({ component, isSelected, onTextChange, onResize }:
           kind={kind}
           width={w}
           height={h}
-          fill={shapeStyle.fill === 'transparent' ? 'transparent' : shapeStyle.fill}
+          fill={shapeStyle.fill}
           stroke={isSelected ? '#3b82f6' : shapeStyle.stroke}
           strokeWidth={shapeStyle.strokeWidth}
         />
